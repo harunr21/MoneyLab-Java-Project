@@ -5,7 +5,7 @@ public class Main {
         UserManager manager = new UserManager();
 
         // --- Kayıt ol ---
-        manager.register("harun",  "sifre123", 5000.0);
+        manager.register("harun",  "sifre123", 5000.0);// deneme
         manager.register("mehmet", "pass456",  10000.0);
         manager.register("harun",  "baska123", 0.0);    // Hata: ad alınmış
 
