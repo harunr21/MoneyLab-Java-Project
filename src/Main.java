@@ -12,4 +12,4 @@ public class Main {
         // balance yazdır
         System.out.println("Güncel Toplam Gelir: " + myBalance.getTotalBalance());
     }
-}//
+}
