@@ -16,7 +16,7 @@ public class Balance {
         System.out.println("Sisteme gelir eklendi: " + income.getAmount() + " TL");
     }
 
-    // toplam bakiye
+    // toplam bakiye//
     public double getTotalBalance() {
         double total = 0;
         for (Income inc : incomes) {

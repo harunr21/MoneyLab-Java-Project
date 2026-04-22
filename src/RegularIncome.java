@@ -19,7 +19,7 @@ public class RegularIncome extends Income {
 	}
 
 	@Override
-	public String getDescription() {
+	public String getDescription() {//
 		// TODO Auto-generated method stub
 		return this.description;
 	}
