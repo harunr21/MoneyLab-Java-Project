@@ -1,3 +1,6 @@
+package src.service;
+
+import src.model.User;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -74,7 +77,11 @@ public class UserManager {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.isBlank()) {
-                    users.add(User.fromFileString(line));
+                    try {
+                        users.add(User.fromFileString(line));
+                    } catch (Exception e) {
+                        System.out.println("Hata: Satır okunamadı ve atlandı -> " + line);
+                    }
                 }
             }
         } catch (IOException e) {

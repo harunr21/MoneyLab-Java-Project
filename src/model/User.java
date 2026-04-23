@@ -1,3 +1,5 @@
+package src.model;
+
 public class User {
 
     // --- Instance Variables (Encapsulation: private) ---
@@ -10,7 +12,12 @@ public class User {
     public User(int id, String name, String password, double goal) {
         this.id       = id;
         this.name     = name;
-        this.password = password;
+        if (password != null && password.length() >= 6) {
+            this.password = password;
+        } else {
+            this.password = "default123"; // Veya hata fırlatılabilir, şimdilik güvenli bir varsayılan
+            System.out.println("Uyarı: Geçersiz şifre! Varsayılan şifre atandı.");
+        }
         this.goal     = goal;
     }
 

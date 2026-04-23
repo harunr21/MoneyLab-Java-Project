@@ -1,3 +1,8 @@
+package src;
+
+import src.model.User;
+import src.service.UserManager;
+
 public class Main {
 
     public static void main(String[] args) {
