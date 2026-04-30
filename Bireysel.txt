@@ -1,0 +1,16 @@
+[TRANSACTIONS]
+INCOME|maaaş|1000.0|2026-04-15|Aylık
+EXPENSE|kira|500.0|2026-04-16|Aylık
+INCOME|dneme|100.0|2026-04-08|Haftalık
+INCOME|deneme1|500.0|2026-04-27|Aylık
+INCOME|dene|1000.0|2026-04-16|Aylık
+EXPENSE|fatura|1000.0|2026-04-15|Aylık
+EXPENSE|dengele|1100.0|2026-04-11|Aylık
+EXPENSE|gitti gitti|0.0|2026-04-09|Aylık
+INCOME|bütçe haaa|700.0|2026-04-24|Tek Seferlik
+INCOME|taşırma|55.0|2026-04-09|Tek Seferlik
+INCOME|taşırma 2 |564.0|2026-04-13|Tek Seferlik
+INCOME|taşırma 3|645.0|2026-04-10|Tek Seferlik
+INCOME|taşırma 4|785.0|2026-04-23|Tek Seferlik
+INCOME|taşırma 4|5455.0|2026-04-14|Tek Seferlik
+[GOALS]
