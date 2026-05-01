@@ -1,0 +1,2 @@
+3,INCOME,4000.0,kyk,2026-03-07,MONTHLY,Kullanıcı
+3,EXPENSE,450.0,abonman,2026-03-07,MONTHLY,Kullanıcı
