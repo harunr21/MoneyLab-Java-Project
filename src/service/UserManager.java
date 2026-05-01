@@ -9,68 +9,48 @@ public class UserManager {
 
     private static final String FILE_PATH = "users.txt";
 
-    // -------------------------------------------------------
-    // Kayıt Ol — yeni kullanıcıyı .txt'e ekler
-    // -------------------------------------------------------
+
     public boolean register(String name, String password, double goal) {
+        try {
+            if (isNameTaken(name)) {
+                System.out.println("Hata: Bu kullanıcı adı zaten alınmış.");
+                return false;
+            }
 
-        if (name == null || name.isBlank()) {
-            System.out.println("Hata: Kullanıcı adı boş olamaz.");
-            return false;
-        }
-        if (password == null || password.length() < 6) {
-            System.out.println("Hata: Şifre en az 6 karakter olmalıdır.");
-            return false;
-        }
-        if (isNameTaken(name)) {
-            System.out.println("Hata: Bu kullanıcı adı zaten alınmış.");
-            return false;
-        }
+            int newId = generateNextId();
+            // User constructor geçersiz bir değer alırsa IllegalArgumentException fırlatır
+            User newUser = new User(newId, name, password, goal);
 
-        int newId = generateNextId();
-        User newUser = new User(newId, name, password, goal);
-
-        try (BufferedWriter writer = new BufferedWriter(
-                new FileWriter(FILE_PATH, true))) {   // append = true
-            writer.write(newUser.toFileString());
-            writer.newLine();
+            saveUserToFile(newUser); // Doğrudan dosyaya ekle
+            
             System.out.println("Kayıt başarılı: " + newUser);
             return true;
-        } catch (IOException e) {
-            System.out.println("Dosya yazma hatası: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Kayıt Başarısız -> " + e.getMessage());
             return false;
         }
     }
 
-    // -------------------------------------------------------
-    // Giriş Yap — name + password eşleşmesini kontrol eder
-    // -------------------------------------------------------
     public User login(String name, String password) {
-
-        List<User> users = loadAllUsers();
-
+        // Her giriş denemesinde tüm kullanıcıları dosyadan okuruz
+        List<User> users = loadAllUsersFromFile();
+        
         for (User user : users) {
-            if (user.getName().equals(name) &&
-                user.getPassword().equals(password)) {
+            if (user.getName().equals(name) && user.getPassword().equals(password)) {
                 System.out.println("Giriş başarılı. Hoş geldiniz, " + user.getName() + "!");
-                return user;          // oturum açan kullanıcı döner
+                return user;
             }
         }
-
         System.out.println("Hata: Kullanıcı adı veya şifre yanlış.");
-        return null;                  // başarısız giriş
+        return null;
     }
 
-    // -------------------------------------------------------
-    // Tüm kullanıcıları .txt'den yükler
-    // -------------------------------------------------------
-    public List<User> loadAllUsers() {
-
+    private List<User> loadAllUsersFromFile() {
         List<User> users = new ArrayList<>();
         File file = new File(FILE_PATH);
 
         if (!file.exists()) {
-            return users;             // dosya yoksa boş liste döner
+            return users; // Dosya yoksa boş liste döner
         }
 
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -78,9 +58,9 @@ public class UserManager {
             while ((line = reader.readLine()) != null) {
                 if (!line.isBlank()) {
                     try {
-                        users.add(User.fromFileString(line));
+                        users.add(parseUser(line));
                     } catch (Exception e) {
-                        System.out.println("Hata: Satır okunamadı ve atlandı -> " + line);
+                        System.out.println("Hata: Satır okunamadı ve atlandı -> " + line + " (" + e.getMessage() + ")");
                     }
                 }
             }
@@ -91,11 +71,20 @@ public class UserManager {
         return users;
     }
 
-    // -------------------------------------------------------
-    // Yardımcı: Kullanıcı adı daha önce alınmış mı?
-    // -------------------------------------------------------
+    private void saveUserToFile(User user) {
+        // 'true' parametresi dosyanın üstüne yazmak yerine sonuna ekleme (append) yapar
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+            writer.write(formatUser(user));
+            writer.newLine();
+        } catch (IOException e) {
+            System.out.println("Dosya yazma hatası: " + e.getMessage());
+        }
+    }
+
     private boolean isNameTaken(String name) {
-        for (User user : loadAllUsers()) {
+        // İsim kullanılmış mı diye bakmak için dosyayı okuruz
+        List<User> users = loadAllUsersFromFile();
+        for (User user : users) {
             if (user.getName().equalsIgnoreCase(name)) {
                 return true;
             }
@@ -103,16 +92,35 @@ public class UserManager {
         return false;
     }
 
-    // -------------------------------------------------------
-    // Yardımcı: Sonraki benzersiz ID'yi üretir
-    // -------------------------------------------------------
     private int generateNextId() {
-        List<User> users = loadAllUsers();
+        // En yüksek ID'yi bulmak için dosyayı okuruz
+        List<User> users = loadAllUsersFromFile();
         if (users.isEmpty()) return 1;
+        
         int maxId = 0;
         for (User user : users) {
-            if (user.getId() > maxId) maxId = user.getId();
+            if (user.getId() > maxId) {
+                maxId = user.getId();
+            }
         }
         return maxId + 1;
+    }
+
+    // Dosyaya yazılacak String formatını belirler
+    private String formatUser(User user) {
+        return user.getId() + "," + user.getName() + "," + user.getPassword() + "," + user.getGoal();
+    }
+
+    // Dosyadan okunan satırı User nesnesine çevirir
+    private User parseUser(String line) {
+        String[] parts = line.split(",");
+        if (parts.length != 4) {
+            throw new IllegalArgumentException("Geçersiz veri formatı");
+        }
+        int id = Integer.parseInt(parts[0].trim());
+        String name = parts[1].trim();
+        String password = parts[2].trim();
+        double goal = Double.parseDouble(parts[3].trim());
+        return new User(id, name, password, goal);
     }
 }

@@ -1,41 +1,16 @@
 package src.model;
 
-public abstract class Income implements Transaction {
-    private double amount;
-    private String description;
-    private String date;
+import java.time.LocalDate;
 
-    public Income(double amount, String description) {
-        this(amount, description, null);
+public class Income extends Transaction {
+
+    public Income(double amount, String description, LocalDate date, Frequency frequency, String source) {
+        super(amount, description, date, frequency, source);
     }
 
-    public Income(double amount, String description, String date) {
-        this.amount = amount;
-        this.description = description;
-        this.date = date;
-    }
-
+    // Gelir olduğu için miktar bakiyeye pozitif olarak yansıtılır
     @Override
-    public double getAmount() {
-        return amount;
+    public double getSignedAmount() {
+        return getAmount();
     }
-
-    public void setAmount(double amount) {
-        this.amount = amount;
-    }
-
-    @Override
-    public String getDescription() {
-        return description;
-    }
-
-    @Override
-    public String getDate() {
-        return date;
-    }
-
-    public void setDate(String date) {
-        this.date = date;
-    }
-
 }

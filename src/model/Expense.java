@@ -1,32 +1,16 @@
 package src.model;
 
-public abstract class Expense implements Transaction {
+import java.time.LocalDate;
 
-    private double amount;
-    private String description;
-    private String date;
+public class Expense extends Transaction {
 
-    public Expense(double amount, String description) {
-        this(amount, description, null);
+    public Expense(double amount, String description, LocalDate date, Frequency frequency, String source) {
+        super(amount, description, date, frequency, source);
     }
 
-    public Expense(double amount, String description, String date) {
-        this.amount = amount;
-        this.description = description;
-        this.date = date;
+    // Gider olduğu için miktar bakiyeden düşülmek üzere negatif döndürülür
+    @Override
+    public double getSignedAmount() {
+        return -getAmount();
     }
-
-    @Override
-    public double getAmount() { return amount; }
-
-    public void setAmount(double amount) { this.amount = amount; }
-
-    @Override
-    public String getDescription() { return description; }
-
-    @Override
-    public String getDate() { return date; }
-
-    public void setDate(String date) { this.date = date; }
-
 }

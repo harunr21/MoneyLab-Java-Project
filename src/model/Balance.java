@@ -4,36 +4,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Balance {
-    private List<Income> incomes;
-    private List<Expense> expenses;
+    private List<Transaction> transactions;
 
     public Balance() {
-        this.incomes = new ArrayList<>();
-        this.expenses = new ArrayList<>();
+        this.transactions = new ArrayList<>();
     }
 
-    // listeye gelir ekleme
-    public void addIncome(Income income) {
-        this.incomes.add(income);
-        System.out.println("Sisteme gelir eklendi: " + income.getAmount() + " TL");
+    public void addTransaction(Transaction transaction) {
+        this.transactions.add(transaction);
+        // Console log çıkarıldı (SRP İhlali Düzeltildi)
     }
 
-    // listeye gider ekleme
-    public void addExpense(Expense expense) {
-        this.expenses.add(expense);
-        System.out.println("Sisteme gider eklendi: " + expense.getAmount() + " TL");
-    }
-
-    // toplam bakiye
     public double getTotalBalance() {
         double total = 0;
-        for (Income inc : incomes) {
-            total += inc.getAmount();
+        // Çok Biçimlilik (Polymorphism) kullanılarak tek listeyle hesaplama
+        for (Transaction t : transactions) {
+            total += t.getSignedAmount();
         }
-        for (Expense exp : expenses) {
-            total -= exp.getAmount();
-        }
-       
         return total;
+    }
+
+    public List<Transaction> getTransactions() {
+        return new ArrayList<>(transactions); // Encapsulation: kopyasını döndürüyoruz
     }
 }

@@ -13,6 +13,9 @@ public class Main {
         manager.register("harun",  "sifre123", 5000.0);// deneme
         manager.register("mehmet", "pass456",  10000.0);
         manager.register("harun",  "baska123", 0.0);    // Hata: ad alınmış
+        
+        // --- Virgül (Hata Yönetimi) Testi ---
+        manager.register("ahmet,can", "123456", 100);   // Hata fırlatacak ve yakalanıp ekrana basılacak
 
         // --- Giriş yap ---
         User loggedIn = manager.login("harun", "sifre123");  // Başarılı
