@@ -1,0 +1,15 @@
+# Kütüphaneler ve Bağımlılıklar
+javafx-sdk/
+
+# Derlenmiş Sınıflar (Class Files)
+*.class
+bin/
+
+# Kullanıcı Veritabanı ve İşlemler
+users.txt
+transactions.txt
+
+# IDE Klasörleri
+.idea/
+*.iml
+.vscode/
