@@ -1,4 +1,4 @@
-package src.gui;
+package com.moneylab.gui;
 
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -8,8 +8,8 @@ import javafx.scene.Scene;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import src.model.*;
-import src.service.TransactionManager;
+import com.moneylab.model.*;
+import com.moneylab.service.TransactionManager;
 
 import java.time.LocalDate;
 import java.util.List;

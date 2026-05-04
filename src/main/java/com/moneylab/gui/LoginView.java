@@ -1,12 +1,12 @@
-package src.gui;
+package com.moneylab.gui;
 
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
-import src.model.User;
-import src.service.UserManager;
+import com.moneylab.model.User;
+import com.moneylab.service.UserManager;
 
 public class LoginView {
     private MainApp app; // Ekranlar arası geçiş yapabilmek için ana uygulamayı (MainApp) tutuyoruz

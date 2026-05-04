@@ -1,9 +1,9 @@
-package src.gui;
+package com.moneylab.gui;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
-import src.model.User;
-import src.service.UserManager;
+import com.moneylab.model.User;
+import com.moneylab.service.UserManager;
 
 // Application sınıfı JavaFX uygulamalarının temelidir. Her JavaFX arayüzü bunu miras alır (extends).
 public class MainApp extends Application {

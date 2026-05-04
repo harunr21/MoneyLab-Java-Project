@@ -1,15 +1,19 @@
-# Kütüphaneler ve Bağımlılıklar
-javafx-sdk/
-
 # Derlenmiş Sınıflar (Class Files)
 *.class
 bin/
 
-# Kullanıcı Veritabanı ve İşlemler
-users.txt
-transactions.txt
+# Maven
+target/
+.maven/
 
-# IDE Klasörleri
+# IDE Dosyaları (Eclipse, IntelliJ, VSCode)
 .idea/
 *.iml
 .vscode/
+.settings/
+.project
+.classpath
+
+# Kullanıcı Veritabanı ve İşlemler (Veri Dosyaları)
+users.txt
+transactions.txt

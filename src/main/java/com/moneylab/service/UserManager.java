@@ -1,6 +1,6 @@
-package src.service;
+package com.moneylab.service;
 
-import src.model.User;
+import com.moneylab.model.User;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;

@@ -1,6 +1,6 @@
-package src;
+package com.moneylab;
 
-import src.gui.MainApp;
+import com.moneylab.gui.MainApp;
 
 public class Main {
 

@@ -1,4 +1,4 @@
-package src.model;
+package com.moneylab.model;
 
 public enum Frequency {
     ONCE,    // Tek seferlik işlem
