@@ -34,9 +34,10 @@ public abstract class Transaction {
 
     public void setDescription(String description) {
         if (description == null || description.isBlank()) {
-            throw new IllegalArgumentException("Açıklama boş olamaz.");
+            this.description = "Belirtilmedi";
+        } else {
+            this.description = description;
         }
-        this.description = description;
     }
 
     public LocalDate getDate() {
