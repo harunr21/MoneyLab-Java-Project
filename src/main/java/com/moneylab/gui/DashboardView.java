@@ -19,8 +19,12 @@ public class DashboardView {
     private User user;
     private Balance balance;
     private TransactionManager transactionManager;
-    private ListView<String> transactionListView; // Geçmişi göstermek için liste
-    private List<Transaction> currentExpandedBaseTransactions; // UI'daki liste ile base objeleri eşlemek için
+    private ListView<String> transactionListView = new ListView<>(); 
+    private ListView<String> incomeListView = new ListView<>();
+    private ListView<String> expenseListView = new ListView<>();
+    private List<Transaction> currentExpandedBaseTransactions;
+    private List<Transaction> currentIncomeBaseTransactions;
+    private List<Transaction> currentExpenseBaseTransactions;
     private Button calculateButton; // Tasarruf sayfasını otomatik yenilemek için
 
     public DashboardView(MainApp app, User user) {
@@ -30,7 +34,7 @@ public class DashboardView {
         
         // Veri kaydetme servisimizi başlatıyoruz
         this.transactionManager = new TransactionManager();
-        this.transactionListView = new ListView<>();
+
 
         // Kullanıcı giriş yaptığında eski işlemlerini dosyadan yüklüyoruz
         List<Transaction> pastTransactions = transactionManager.loadUserTransactions(user.getId());
@@ -90,33 +94,49 @@ public class DashboardView {
         assetsLayout.getChildren().addAll(balanceLabel, pieChart);
         assetsTab.setContent(assetsLayout);
 
-        // --- İKİNCİ SEKME: İŞLEMLERİM ---
-        Tab transactionsTab = new Tab("Gelir / Gider İşlemleri");
+     // --- İKİNCİ SEKME: İŞLEMLERİM ---
+        Tab transactionsTab = new Tab("Bütçe Yönetimi");
         BorderPane transactionsLayout = new BorderPane();
         
-        // İşlemlerim -> Sol Taraf: Form
+     // İşlemlerim -> Sol Taraf: Form (Dinamik Yapı)
         VBox formBox = new VBox(15);
         formBox.setPadding(new Insets(20));
         formBox.setPrefWidth(250);
         formBox.setStyle("-fx-background-color: #f4f4f9; -fx-border-color: #ddd; -fx-border-width: 0 1px 0 0;");
 
-        Label formTitle = new Label("Yeni İşlem Ekle");
-        formTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+     // --- GÖRÜNÜM 1: SADECE BUTONLAR ---
+        VBox buttonsLayout = new VBox(15);
+        buttonsLayout.setAlignment(Pos.CENTER);
+        
+        Button btnIncome = new Button("Gelir Ekle");
+        btnIncome.setMaxWidth(Double.MAX_VALUE);
+        btnIncome.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 12px; -fx-cursor: hand;");
 
-        ComboBox<String> typeBox = new ComboBox<>();
-        typeBox.getItems().addAll("Gelir", "Gider");
-        typeBox.setValue("Gelir");
-        typeBox.setMaxWidth(Double.MAX_VALUE);
+        Button btnExpense = new Button("Gider Ekle");
+        btnExpense.setMaxWidth(Double.MAX_VALUE);
+        btnExpense.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 12px; -fx-cursor: hand;");
+        
+        // YENİ EKLENEN BUTON: İŞLEM GEÇMİŞİ
+        Button btnHistory = new Button("İşlem Geçmişi");
+        btnHistory.setMaxWidth(Double.MAX_VALUE);
+        btnHistory.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 12px; -fx-cursor: hand;");
+
+        // Üç butonu da listeye ekliyoruz
+        buttonsLayout.getChildren().addAll(btnIncome, btnExpense, btnHistory);
+
+        // --- GÖRÜNÜM 2: GİRİŞ FORMU ---
+        VBox inputsLayout = new VBox(15);
+        
+        Label formTitle = new Label("Detaylar");
+        formTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
         ComboBox<String> frequencyBox = new ComboBox<>();
         frequencyBox.getItems().addAll("Tek Seferlik", "Haftalık", "Aylık", "Yıllık");
         frequencyBox.setValue("Tek Seferlik");
         frequencyBox.setMaxWidth(Double.MAX_VALUE);
 
-        // Tarih seçici (DatePicker) objesi oluşturuyoruz.
-        // Kullanıcı buradan geçmiş veya gelecek bir tarihi işlemin başlangıç zamanı olarak atayabilir.
         DatePicker datePicker = new DatePicker();
-        datePicker.setValue(LocalDate.now()); // Varsayılan olarak bugünü seçiyoruz
+        datePicker.setValue(LocalDate.now());
         datePicker.setMaxWidth(Double.MAX_VALUE);
 
         TextField amountInput = new TextField();
@@ -125,19 +145,53 @@ public class DashboardView {
         TextField descInput = new TextField();
         descInput.setPromptText("Açıklama (Örn: Market)");
 
-        Button addButton = new Button("Ekle");
-        addButton.setMaxWidth(Double.MAX_VALUE);
-        addButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+        Button submitButton = new Button("Kaydet");
+        submitButton.setMaxWidth(Double.MAX_VALUE);
+        submitButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+
+        Button cancelButton = new Button("İptal (Geri Dön)");
+        cancelButton.setMaxWidth(Double.MAX_VALUE);
+        cancelButton.setStyle("-fx-background-color: #9e9e9e; -fx-text-fill: white; -fx-cursor: hand;");
 
         Label errorLabel = new Label();
         errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 12px;");
 
-        formBox.getChildren().addAll(formTitle, typeBox, frequencyBox, datePicker, amountInput, descInput, addButton, errorLabel);
-        transactionsLayout.setLeft(formBox);
+        inputsLayout.getChildren().addAll(formTitle, frequencyBox, datePicker, amountInput, descInput, submitButton, cancelButton, errorLabel);
 
-        // İşlemlerim -> Sağ Taraf: İşlem Geçmişi (Liste)
+        // Başlangıçta form kutusuna sadece butonları ekliyoruz
+        formBox.getChildren().add(buttonsLayout);
+
+        // Seçilen işlem tipini hafızada tutmak için dizi kullanıyoruz (Lambda kuralları gereği)
+        final String[] transactionType = {""};
+
+        // Butonlara basıldığında formu göster ve başlığı değiştir
+        btnIncome.setOnAction(e -> {
+            transactionType[0] = "Gelir";
+            formTitle.setText("Yeni Gelir Ekle");
+            formTitle.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 18px; -fx-font-weight: bold;");
+            formBox.getChildren().setAll(inputsLayout); // Ekranı forma çevir
+        });
+
+        btnExpense.setOnAction(e -> {
+            transactionType[0] = "Gider";
+            formTitle.setText("Yeni Gider Ekle");
+            formTitle.setStyle("-fx-text-fill: #f44336; -fx-font-size: 18px; -fx-font-weight: bold;");
+            formBox.getChildren().setAll(inputsLayout); // Ekranı forma çevir
+        });
+
+        // İptal butonuna basılırsa kutuları temizle ve ilk ekrana dön
+        cancelButton.setOnAction(e -> {
+            amountInput.clear();
+            descInput.clear();
+            errorLabel.setText("");
+            formBox.getChildren().setAll(buttonsLayout);
+        });
+
+        transactionsLayout.setLeft(formBox);
+     // İşlemlerim -> Sağ Taraf: İşlem Geçmişi (Liste)
         VBox historyBox = new VBox(10);
         historyBox.setPadding(new Insets(20));
+        
         Label historyTitle = new Label("İşlem Geçmişi");
         historyTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         
@@ -148,11 +202,31 @@ public class DashboardView {
         deleteButton.setMaxWidth(Double.MAX_VALUE);
         deleteButton.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
 
-        historyBox.getChildren().addAll(historyTitle, transactionListView, deleteButton);
-        transactionsLayout.setCenter(historyBox);
+        // YENİ: GEÇMİŞİ GİZLE BUTONU
+        Button closeHistoryButton = new Button("Geçmişi Gizle");
+        closeHistoryButton.setMaxWidth(Double.MAX_VALUE);
+        closeHistoryButton.setStyle("-fx-background-color: #9e9e9e; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
 
+        historyBox.getChildren().addAll(historyTitle, transactionListView, deleteButton, closeHistoryButton);
+
+        // BAŞLANGIÇTA GEÇMİŞİ GİZLE (Pane'in ortasını boş bırakıyoruz)
+        transactionsLayout.setCenter(null);
+
+        // =========================================================================
+        // GEÇMİŞ GÖSTER / GİZLE AKSİYONLARI
+        // =========================================================================
+        
+        // Sol menüdeki İşlem Geçmişi butonuna tıklanınca
+        btnHistory.setOnAction(e -> {
+            transactionsLayout.setCenter(historyBox); // Ekranın ortasına listeyi getir
+        });
+
+        // Listenin altındaki Geçmişi Gizle butonuna tıklanınca
+        closeHistoryButton.setOnAction(e -> {
+            transactionsLayout.setCenter(null); // Ekranın ortasını tekrar boşalt
+        });
+        
         transactionsTab.setContent(transactionsLayout);
-
         // --- ÜÇÜNCÜ SEKME: TASARRUF TAKİBİ ---
         Tab savingsTab = new Tab("Tasarruf Takibi");
         VBox savingsLayout = new VBox(20);
@@ -230,39 +304,35 @@ public class DashboardView {
         // =========================================================================
         // 3. İŞLEM EKLEME MANTIĞI VE KAYDETME
         // =========================================================================
-        addButton.setOnAction(e -> {
+     // =========================================================================
+        // 3. İŞLEM EKLEME MANTIĞI VE KAYDETME
+        // =========================================================================
+        submitButton.setOnAction(e -> {
             try {
                 errorLabel.setText(""); // Hata mesajını temizle
                 
                 double amount = Double.parseDouble(amountInput.getText());
                 String desc = descInput.getText();
-                String type = typeBox.getValue();
+                String type = transactionType[0]; // Kullanıcının tıkladığı butona göre belirlendi
 
                 if(desc == null || desc.trim().isEmpty()) {
                     throw new IllegalArgumentException("Açıklama boş olamaz.");
                 }
-                
-                // Dosya formatı virgül tabanlı olduğu için kullanıcının açıklamaya virgül girmesini engelliyoruz
                 if(desc.contains(",")) {
                     throw new IllegalArgumentException("Açıklamada virgül (,) kullanılamaz.");
                 }
 
-                // Sıklık (Frequency) seçimi string olduğu için, modelimizdeki ENUM yapısına dönüştürüyoruz.
                 String freqStr = frequencyBox.getValue();
                 Frequency frequency = Frequency.ONCE;
                 if (freqStr.equals("Haftalık")) frequency = Frequency.WEEKLY;
                 else if (freqStr.equals("Aylık")) frequency = Frequency.MONTHLY;
                 else if (freqStr.equals("Yıllık")) frequency = Frequency.YEARLY;
 
-                // Ekranda seçilen takvim tarihini alıyoruz, eğer seçilmediyse güvenli olarak bugünü atıyoruz.
                 LocalDate selectedDate = datePicker.getValue();
                 if (selectedDate == null) {
                     selectedDate = LocalDate.now();
                 }
 
-                // **Çok Biçimlilik (Polymorphism) Kullanımı:** 
-                // Üst sınıf (Transaction) referansıyla alt sınıf (Income veya Expense) nesnesi tutuyoruz.
-                // Bu sayede ileride "Transaction listesi" dediğimizde ikisi de aynı listede sorunsuzca durabilecek.
                 Transaction transaction;
                 if (type.equals("Gelir")) {
                     transaction = new Income(amount, desc, selectedDate, frequency, "Kullanıcı");
@@ -270,17 +340,21 @@ public class DashboardView {
                     transaction = new Expense(amount, desc, selectedDate, frequency, "Kullanıcı");
                 }
 
-                // 1. İşlemi anlık bakiyeye (RAM'e) ekle
+                // 1. İşlemi RAM'e ekle
                 balance.addTransaction(transaction);
                 
-                // 2. İşlemi dosyaya (txt) kaydet (Kalıcı hale getir)
-                transactionManager.saveTransaction(user.getId(), transaction);
+                // 2. Dosyaya kaydet
+                // NOT: Eğer yeni TXT yapısına (id yerine isim) geçtiysek burayı user.getName() yapmalısın. 
+                // Geçmediysek user.getId() olarak kalabilir.
+                transactionManager.saveTransaction(user.getId(), transaction); 
                 
-                // 3. Ekrandaki grafiği ve listeyi hemen güncelle
+                // 3. Arayüzü güncelle
                 updateDashboard(balanceLabel, pieChart);
 
+                // *** 4. EKRANI SIFIRLA VE BUTONLARA GERİ DÖN ***
                 amountInput.clear();
                 descInput.clear();
+                formBox.getChildren().setAll(buttonsLayout);
 
             } catch (NumberFormatException ex) {
                 errorLabel.setText("Lütfen sayısal bir miktar girin!");
