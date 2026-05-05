@@ -20,8 +20,9 @@ public class DashboardView {
     private Balance balance;
     private TransactionManager transactionManager;
     private ListView<String> transactionListView; // Geçmişi göstermek için liste
-    private List<Transaction> currentExpandedBaseTransactions; // UI'daki liste ile base objeleri eşlemek için
-    private Button calculateButton; // Tasarruf sayfasını otomatik yenilemek için
+    private Button calculateButton; // Hedef sayfasını yenilemek için
+    private Tab targetTab; // Hedef sekmesinin aktif olup olmadığını kontrol etmek için
+    private Label goalLabel;
 
     public DashboardView(MainApp app, User user) {
         this.app = app;
@@ -55,9 +56,7 @@ public class DashboardView {
         Label welcomeLabel = new Label("Hoş geldin, " + user.getName() + "!");
         welcomeLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;");
         
-        Label goalLabel = new Label("Birikim Hedefin: " + user.getGoal() + " TL");
-        goalLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #e3f2fd;");
-        userInfoBox.getChildren().addAll(welcomeLabel, goalLabel);
+        userInfoBox.getChildren().addAll(welcomeLabel);
 
         // Boşluk doldurucu (Çıkış butonunu en sağa iter)
         Region spacer = new Region();
@@ -71,7 +70,7 @@ public class DashboardView {
         rootLayout.setTop(topBox);
 
         // =========================================================================
-        // 2. SEKME YAPISI (TabPane ile 2 Ayrı Sayfa)
+        // 2. SEKME YAPISI (TabPane ile 3 Ayrı Sayfa)
         // =========================================================================
         TabPane tabPane = new TabPane();
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE); // Sekmelerdeki çarpı (X) tuşunu gizler
@@ -109,7 +108,7 @@ public class DashboardView {
         typeBox.setMaxWidth(Double.MAX_VALUE);
 
         ComboBox<String> frequencyBox = new ComboBox<>();
-        frequencyBox.getItems().addAll("Tek Seferlik", "Haftalık", "Aylık", "Yıllık");
+        frequencyBox.getItems().addAll("Tek Seferlik", "Haftalık", "Aylık");
         frequencyBox.setValue("Tek Seferlik");
         frequencyBox.setMaxWidth(Double.MAX_VALUE);
 
@@ -125,6 +124,10 @@ public class DashboardView {
         TextField descInput = new TextField();
         descInput.setPromptText("Açıklama (Örn: Market)");
 
+        // Kaynak giriş alanı — kullanıcı işlemin kaynağını girebilir
+        TextField sourceInput = new TextField();
+        sourceInput.setPromptText("Kaynak (Örn: Maaş, Kira)");
+
         Button addButton = new Button("Ekle");
         addButton.setMaxWidth(Double.MAX_VALUE);
         addButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
@@ -132,7 +135,7 @@ public class DashboardView {
         Label errorLabel = new Label();
         errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 12px;");
 
-        formBox.getChildren().addAll(formTitle, typeBox, frequencyBox, datePicker, amountInput, descInput, addButton, errorLabel);
+        formBox.getChildren().addAll(formTitle, typeBox, frequencyBox, datePicker, amountInput, descInput, sourceInput, addButton, errorLabel);
         transactionsLayout.setLeft(formBox);
 
         // İşlemlerim -> Sağ Taraf: İşlem Geçmişi (Liste)
@@ -153,14 +156,17 @@ public class DashboardView {
 
         transactionsTab.setContent(transactionsLayout);
 
-        // --- ÜÇÜNCÜ SEKME: TASARRUF TAKİBİ ---
-        Tab savingsTab = new Tab("Tasarruf Takibi");
-        VBox savingsLayout = new VBox(20);
-        savingsLayout.setAlignment(Pos.CENTER);
-        savingsLayout.setPadding(new Insets(30));
+        // --- ÜÇÜNCÜ SEKME: HEDEF VE GELECEK PLANI ---
+        targetTab = new Tab("Hedef");
+        VBox targetLayout = new VBox(20);
+        targetLayout.setAlignment(Pos.CENTER);
+        targetLayout.setPadding(new Insets(30));
+
+        this.goalLabel = new Label("Mevcut Hedefin: " + user.getGoal() + " TL");
+        this.goalLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2196F3;");
 
         Label savingsTitle = new Label("Gelecekteki Bakiyeni Hesapla");
-        savingsTitle.setStyle("-fx-font-size: 20px; -fx-font-weight: bold;");
+        savingsTitle.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
         HBox controlBox = new HBox(10);
         controlBox.setAlignment(Pos.CENTER);
@@ -185,8 +191,37 @@ public class DashboardView {
         goalProgressBar.setPrefHeight(30);
         goalProgressBar.setStyle("-fx-accent: #4CAF50;");
 
-        savingsLayout.getChildren().addAll(savingsTitle, controlBox, projectedBalanceLabel, goalStatusLabel, goalProgressBar);
-        savingsTab.setContent(savingsLayout);
+        HBox updateGoalBox = new HBox(10);
+        updateGoalBox.setAlignment(Pos.CENTER);
+        TextField newGoalInput = new TextField();
+        newGoalInput.setPromptText("Yeni Hedef (Örn: 10000)");
+        Button updateGoalBtn = new Button("Hedefi Güncelle");
+        updateGoalBtn.setStyle("-fx-background-color: #FF9800; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand;");
+        Label goalUpdateMsg = new Label();
+        
+        updateGoalBtn.setOnAction(e -> {
+            try {
+                double newGoal = Double.parseDouble(newGoalInput.getText());
+                user.setGoal(newGoal);
+                app.getUserManager().updateUser(user);
+                
+                this.goalLabel.setText("Mevcut Hedefin: " + user.getGoal() + " TL");
+                goalUpdateMsg.setText("Hedef başarıyla güncellendi!");
+                goalUpdateMsg.setStyle("-fx-text-fill: green;");
+                newGoalInput.clear();
+                calculateButton.fire(); // Çubuğu ve durumu hemen güncelle
+            } catch (NumberFormatException ex) {
+                goalUpdateMsg.setText("Lütfen sayısal bir değer girin!");
+                goalUpdateMsg.setStyle("-fx-text-fill: red;");
+            } catch (IllegalArgumentException ex) {
+                goalUpdateMsg.setText(ex.getMessage());
+                goalUpdateMsg.setStyle("-fx-text-fill: red;");
+            }
+        });
+        updateGoalBox.getChildren().addAll(newGoalInput, updateGoalBtn, goalUpdateMsg);
+
+        targetLayout.getChildren().addAll(this.goalLabel, updateGoalBox, new Separator(), savingsTitle, controlBox, projectedBalanceLabel, goalStatusLabel, goalProgressBar);
+        targetTab.setContent(targetLayout);
         
         // Gelecekteki bakiyeyi hesaplama mantığı
         calculateButton.setOnAction(e -> {
@@ -224,7 +259,7 @@ public class DashboardView {
         calculateButton.fire();
 
         // Sekmeleri TabPane'e ekle
-        tabPane.getTabs().addAll(assetsTab, transactionsTab, savingsTab);
+        tabPane.getTabs().addAll(assetsTab, transactionsTab, targetTab);
         rootLayout.setCenter(tabPane);
 
         // =========================================================================
@@ -247,12 +282,20 @@ public class DashboardView {
                     throw new IllegalArgumentException("Açıklamada virgül (,) kullanılamaz.");
                 }
 
+                // Kaynak alanını formdan alıyoruz, boşsa varsayılan değer veriyoruz
+                String source = sourceInput.getText();
+                if (source == null || source.trim().isEmpty()) {
+                    source = "Belirtilmedi";
+                }
+                if (source.contains(",")) {
+                    throw new IllegalArgumentException("Kaynak alanında virgül (,) kullanılamaz.");
+                }
+
                 // Sıklık (Frequency) seçimi string olduğu için, modelimizdeki ENUM yapısına dönüştürüyoruz.
                 String freqStr = frequencyBox.getValue();
                 Frequency frequency = Frequency.ONCE;
                 if (freqStr.equals("Haftalık")) frequency = Frequency.WEEKLY;
                 else if (freqStr.equals("Aylık")) frequency = Frequency.MONTHLY;
-                else if (freqStr.equals("Yıllık")) frequency = Frequency.YEARLY;
 
                 // Ekranda seçilen takvim tarihini alıyoruz, eğer seçilmediyse güvenli olarak bugünü atıyoruz.
                 LocalDate selectedDate = datePicker.getValue();
@@ -262,12 +305,11 @@ public class DashboardView {
 
                 // **Çok Biçimlilik (Polymorphism) Kullanımı:** 
                 // Üst sınıf (Transaction) referansıyla alt sınıf (Income veya Expense) nesnesi tutuyoruz.
-                // Bu sayede ileride "Transaction listesi" dediğimizde ikisi de aynı listede sorunsuzca durabilecek.
                 Transaction transaction;
                 if (type.equals("Gelir")) {
-                    transaction = new Income(amount, desc, selectedDate, frequency, "Kullanıcı");
+                    transaction = new Income(amount, desc, selectedDate, frequency, source);
                 } else {
-                    transaction = new Expense(amount, desc, selectedDate, frequency, "Kullanıcı");
+                    transaction = new Expense(amount, desc, selectedDate, frequency, source);
                 }
 
                 // 1. İşlemi anlık bakiyeye (RAM'e) ekle
@@ -277,10 +319,11 @@ public class DashboardView {
                 transactionManager.saveTransaction(user.getId(), transaction);
                 
                 // 3. Ekrandaki grafiği ve listeyi hemen güncelle
-                updateDashboard(balanceLabel, pieChart);
+                updateDashboard(balanceLabel, pieChart, tabPane);
 
                 amountInput.clear();
                 descInput.clear();
+                sourceInput.clear();
 
             } catch (NumberFormatException ex) {
                 errorLabel.setText("Lütfen sayısal bir miktar girin!");
@@ -296,72 +339,73 @@ public class DashboardView {
             // Kullanıcının ListView'da kaçıncı satırı seçtiğini buluyoruz
             int selectedIndex = transactionListView.getSelectionModel().getSelectedIndex();
             
-            if (selectedIndex >= 0 && currentExpandedBaseTransactions != null) {
-                // Ekranda görünen "Kopya" işlemin aslında arka planda hangi "Orijinal (Base)" 
-                // işleme ait olduğunu 'currentExpandedBaseTransactions' listemizden öğreniyoruz.
-                Transaction baseTransactionToRemove = currentExpandedBaseTransactions.get(selectedIndex);
+            if (selectedIndex >= 0) {
+                // Artık doğrudan orijinal (base) işlemleri gösteriyoruz, 
+                // bu yüzden seçilen index doğrudan silinecek işleme karşılık gelir.
+                // Eski yöntemde çoğaltılmış (expanded) işlemler gösteriliyordu ve 
+                // yanlış eşleştirme hatası oluşabiliyordu.
+                List<Transaction> baseList = balance.getTransactions();
                 
-                // 1. Orijinal ana işlemi anlık bakiyeden (RAM objesinden) kalıcı olarak sil
-                balance.removeTransaction(baseTransactionToRemove);
-                
-                // 2. Dosyayı (transactions.txt) o işlem olmadan baştan aşağı yeniden yazdır
-                // Böylece tüm kopyalar ve orijinal işlem dosyadan temizlenmiş olur
-                transactionManager.rewriteUserTransactions(user.getId(), balance.getTransactions());
-                
-                // 3. Ekrandaki grafiği, toplam bakiyeyi ve listeyi anında yenile
-                updateDashboard(balanceLabel, pieChart);
+                if (selectedIndex < baseList.size()) {
+                    // Seçilen indexteki orijinal işlemi alıyoruz
+                    Transaction toRemove = baseList.get(selectedIndex);
+                    
+                    // 1. Orijinal işlemi bakiyeden (RAM'den) sil
+                    balance.removeTransaction(toRemove);
+                    
+                    // 2. Dosyayı (transactions.txt) o işlem olmadan baştan yaz
+                    transactionManager.rewriteUserTransactions(user.getId(), balance.getTransactions());
+                    
+                    // 3. Ekranı güncelle
+                    updateDashboard(balanceLabel, pieChart, tabPane);
+                }
             }
         });
 
         // Ekran açılırken grafikleri ve geçmiş listesini ilk kez dolduruyoruz
-        updateDashboard(balanceLabel, pieChart);
+        updateDashboard(balanceLabel, pieChart, tabPane);
 
         return new Scene(rootLayout, 850, 550);
     }
 
     // Ekrandaki bakiyeyi, pasta grafiğini ve geçmiş listesini güncelleyen metod
-    private void updateDashboard(Label balanceLabel, PieChart pieChart) {
+    private void updateDashboard(Label balanceLabel, PieChart pieChart, TabPane tabPane) {
         
         balanceLabel.setText("Mevcut Bakiye: " + balance.getTotalBalance() + " TL");
 
+        // Gelir/Gider toplamları için çoğaltılmış (expanded) işlemleri kullanıyoruz
+        // Bu sayede tekrarlanan işlemler (aylık, haftalık vb.) toplama doğru yansır
         double totalIncome = 0;
         double totalExpense = 0;
-        
-        // Listeyi temizle ve dosyadaki verilerle yeniden doldur
-        transactionListView.getItems().clear();
-        currentExpandedBaseTransactions = new java.util.ArrayList<>();
-
-        // UI (arayüz) için işlemleri, tekrarlarına göre matematiksel çoğaltılmış halleriyle alıyoruz
         List<Transaction> expanded = balance.getExpandedTransactions();
-        
-        // Bu ise asıl kaydedilmiş (çoğaltılmamış) olan kök işlemler listemiz
-        List<Transaction> baseList = balance.getTransactions();
-
         for (Transaction t : expanded) {
-            
-            // "Bu kopya işlem aslında hangi orijinal işlemi temsil ediyor?" diye arıyoruz
-            Transaction parent = null;
-            for (Transaction b : baseList) {
-                // Miktar, açıklama ve sıklık eşleşiyorsa bu kopya o orijinalin yavrusudur diyoruz
-                if (b.getAmount() == t.getAmount() && b.getDescription().equals(t.getDescription()) && b.getFrequency() == t.getFrequency()) {
-                    parent = b;
-                    break;
-                }
-            }
-            // Bulduğumuz orijinal işlemi, daha sonra silme butonunda kullanabilmek için eşleştirme listesine ekliyoruz
-            currentExpandedBaseTransactions.add(parent);
-
-            String freqDisplay = "";
-            if (t.getFrequency() == Frequency.WEEKLY) freqDisplay = " [Haftalık]";
-            else if (t.getFrequency() == Frequency.MONTHLY) freqDisplay = " [Aylık]";
-            else if (t.getFrequency() == Frequency.YEARLY) freqDisplay = " [Yıllık]";
-
             if (t instanceof Income) {
                 totalIncome += t.getAmount();
-                transactionListView.getItems().add("[+] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + " (" + t.getDate() + ")");
-            } else if (t instanceof Expense) {
+            } else {
                 totalExpense += t.getAmount();
-                transactionListView.getItems().add("[-] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + " (" + t.getDate() + ")");
+            }
+        }
+
+        // ListView için ORIJINAL (base) işlemleri gösteriyoruz
+        // Artık çoğaltılmış kopyaları göstermiyoruz — bu sayede silme işlemi 
+        // doğrudan seçilen indexle yapılabilir, yanlış eşleştirme riski ortadan kalkar
+        transactionListView.getItems().clear();
+        List<Transaction> baseList = balance.getTransactions();
+
+        for (Transaction t : baseList) {
+            String freqDisplay = "";
+        if (t.getFrequency() == Frequency.WEEKLY) freqDisplay = " [Haftalık]";
+        else if (t.getFrequency() == Frequency.MONTHLY) freqDisplay = " [Aylık]";
+
+            String sourceDisplay = "";
+            if (t.getSource() != null && !t.getSource().isEmpty()) {
+                sourceDisplay = " - " + t.getSource();
+            }
+
+            if (t instanceof Income) {
+                transactionListView.getItems().add("[+] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
+            } else if (t instanceof Expense) {
+                transactionListView.getItems().add("[-] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
             }
         }
 
@@ -385,9 +429,12 @@ public class DashboardView {
             }
         }
 
-        // Eğer Tasarruf Takibi sayfası oluşturulduysa, bakiyeye bağlı olarak o sayfayı da anında güncelleyelim
-        if (calculateButton != null) {
-            calculateButton.fire();
+        // Hedef sayfasını SADECE o sekme açıksa güncelle
+        if (calculateButton != null && tabPane != null) {
+            Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+            if (selectedTab == targetTab) {
+                calculateButton.fire();
+            }
         }
     }
 }

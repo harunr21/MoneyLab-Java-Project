@@ -4,7 +4,6 @@ bin/
 
 # Maven
 target/
-.maven/
 
 # IDE Dosyaları (Eclipse, IntelliJ, VSCode)
 .idea/

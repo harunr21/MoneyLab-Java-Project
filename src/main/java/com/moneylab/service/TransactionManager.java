@@ -8,7 +8,8 @@ import java.util.List;
 
 public class TransactionManager {
 
-    private static final String FILE_PATH = "transactions.txt";
+    // Dosya yolunu çalışma dizinine göre belirliyoruz
+    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "transactions.txt";
 
     // Kullanıcının işlemlerini dosyadan okur ve bir liste olarak döndürür
     public List<Transaction> loadUserTransactions(int userId) {
@@ -19,7 +20,9 @@ public class TransactionManager {
             return userTransactions; // Dosya yoksa boş liste döner
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.isBlank()) {
@@ -53,6 +56,15 @@ public class TransactionManager {
             }
         } catch (IOException e) {
             System.out.println("Dosya okuma hatası: " + e.getMessage());
+        } finally {
+            // Dosyayı her durumda kapatıyoruz
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    System.out.println("Dosya kapatma hatası: " + e.getMessage());
+                }
+            }
         }
 
         return userTransactions;
@@ -60,7 +72,9 @@ public class TransactionManager {
 
     // Yeni bir işlemi kullanıcının ID'si ile birlikte dosyaya kaydeder
     public void saveTransaction(int userId, Transaction transaction) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(FILE_PATH, true));
             
             String type = (transaction instanceof Income) ? "INCOME" : "EXPENSE";
             
@@ -78,6 +92,14 @@ public class TransactionManager {
             
         } catch (IOException e) {
             System.out.println("Dosya yazma hatası: " + e.getMessage());
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    System.out.println("Dosya kapatma hatası: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -89,7 +111,9 @@ public class TransactionManager {
         List<String> otherUsersLines = new ArrayList<>();
         
         // 1. Önce dosyayı okuyup, diğer kullanıcıların işlemlerini hafızada tutuyoruz
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.isBlank()) {
@@ -107,11 +131,21 @@ public class TransactionManager {
             }
         } catch (Exception e) {
             System.out.println("Dosya okuma hatası: " + e.getMessage());
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    System.out.println("Dosya kapatma hatası: " + e.getMessage());
+                }
+            }
         }
 
         // 2. Dosyayı baştan yaratıyoruz (Eski veriler silinir)
         // FileWriter'da false parametresi (veya parametresiz kullanım) dosyanın üzerine yazar
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH))) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(FILE_PATH));
             
             // 3. Diğer kullanıcıların verilerini geri yazıyoruz
             for (String line : otherUsersLines) {
@@ -135,6 +169,14 @@ public class TransactionManager {
             
         } catch (IOException e) {
             System.out.println("Dosya yazma hatası: " + e.getMessage());
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    System.out.println("Dosya kapatma hatası: " + e.getMessage());
+                }
+            }
         }
     }
 }

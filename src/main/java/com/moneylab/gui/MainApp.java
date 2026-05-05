@@ -26,6 +26,10 @@ public class MainApp extends Application {
         this.window.show();
     }
 
+    public UserManager getUserManager() {
+        return this.userManager;
+    }
+
     // Giriş ekranına geçiş yapmak için metod
     public void showLogin() {
         // LoginView sınıfından bir nesne oluşturup, ana pencereye (Stage) sahne (Scene) olarak veriyoruz.

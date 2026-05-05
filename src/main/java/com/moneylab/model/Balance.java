@@ -72,8 +72,6 @@ public class Balance {
                     currentDate = currentDate.plusWeeks(1); 
                 } else if (base.getFrequency() == Frequency.MONTHLY) {
                     currentDate = currentDate.plusMonths(1); 
-                } else if (base.getFrequency() == Frequency.YEARLY) {
-                    currentDate = currentDate.plusYears(1); 
                 }
             }
         }
@@ -100,7 +98,13 @@ public class Balance {
         return total;
     }
 
+    /**
+     * İşlem listesinin bir kopyasını döndürür (Kapsülleme / Encapsulation).
+     * Not: Bu "sığ kopya" (shallow copy) döndürür — yani liste yapısı kopyalanır
+     * ama içindeki Transaction nesneleri aynı referanslardır.
+     * Dışarıdan listeye eleman eklenip çıkarılması orijinal listeyi etkilemez.
+     */
     public List<Transaction> getTransactions() {
-        return new ArrayList<>(transactions); // Encapsulation
+        return new ArrayList<>(transactions);
     }
 }

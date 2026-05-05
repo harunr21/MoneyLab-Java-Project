@@ -7,28 +7,42 @@ import java.util.List;
 
 public class UserManager {
 
-    private static final String FILE_PATH = "users.txt";
+    // Dosya yolunu çalışma dizinine göre belirliyoruz
+    // Bu sayede uygulama hangi dizinden çalıştırılırsa çalıştırılsın dosyayı doğru yerde arar
+    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "users.txt";
 
 
-    public boolean register(String name, String password, double goal) {
-        try {
-            if (isNameTaken(name)) {
+    public boolean register(String name, String password) {
+        // Dosyadan tüm kullanıcıları BİR KERE okuyoruz
+        // Eskiden isNameTaken() ve generateNextId() ayrı ayrı okuyordu (2 kere), şimdi tek okuma ile hallettik
+        List<User> users = loadAllUsersFromFile();
+
+        // İsim kontrolü — dosyayı tekrar okumadan, elimizdeki listeden bakıyoruz
+        for (User user : users) {
+            if (user.getName().equalsIgnoreCase(name)) {
                 System.out.println("Hata: Bu kullanıcı adı zaten alınmış.");
                 return false;
             }
-
-            int newId = generateNextId();
-            // User constructor geçersiz bir değer alırsa IllegalArgumentException fırlatır
-            User newUser = new User(newId, name, password, goal);
-
-            saveUserToFile(newUser); // Doğrudan dosyaya ekle
-            
-            System.out.println("Kayıt başarılı: " + newUser);
-            return true;
-        } catch (IllegalArgumentException e) {
-            System.out.println("Kayıt Başarısız -> " + e.getMessage());
-            return false;
         }
+
+        // En yüksek ID'yi bul — yine dosyayı tekrar okumadan
+        int maxId = 0;
+        for (User user : users) {
+            if (user.getId() > maxId) {
+                maxId = user.getId();
+            }
+        }
+        int newId = maxId + 1;
+
+        // User constructor geçersiz bir değer alırsa IllegalArgumentException fırlatır
+        // Bu hatayı BURADA yakalamıyoruz, doğrudan GUI katmanına (RegisterView) iletiyoruz
+        // Böylece kullanıcı ekranda hatanın tam sebebini (şifre kısa, isim boş vb.) görebilir
+        User newUser = new User(newId, name, password, 0.0);
+
+        saveUserToFile(newUser);
+        
+        System.out.println("Kayıt başarılı: " + newUser);
+        return true;
     }
 
     public User login(String name, String password) {
@@ -53,7 +67,11 @@ public class UserManager {
             return users; // Dosya yoksa boş liste döner
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+        // try-finally yapısı: dosyayı okuduktan sonra finally bloğunda kapatıyoruz
+        // Bu sayede hata olsa bile dosya her zaman kapatılır
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(file));
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.isBlank()) {
@@ -66,6 +84,15 @@ public class UserManager {
             }
         } catch (IOException e) {
             System.out.println("Dosya okuma hatası: " + e.getMessage());
+        } finally {
+            // Dosyayı her durumda kapatıyoruz (hata olsa bile)
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    System.out.println("Dosya kapatma hatası: " + e.getMessage());
+                }
+            }
         }
 
         return users;
@@ -73,37 +100,22 @@ public class UserManager {
 
     private void saveUserToFile(User user) {
         // 'true' parametresi dosyanın üstüne yazmak yerine sonuna ekleme (append) yapar
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(FILE_PATH, true))) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(FILE_PATH, true));
             writer.write(formatUser(user));
             writer.newLine();
         } catch (IOException e) {
             System.out.println("Dosya yazma hatası: " + e.getMessage());
-        }
-    }
-
-    private boolean isNameTaken(String name) {
-        // İsim kullanılmış mı diye bakmak için dosyayı okuruz
-        List<User> users = loadAllUsersFromFile();
-        for (User user : users) {
-            if (user.getName().equalsIgnoreCase(name)) {
-                return true;
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    System.out.println("Dosya kapatma hatası: " + e.getMessage());
+                }
             }
         }
-        return false;
-    }
-
-    private int generateNextId() {
-        // En yüksek ID'yi bulmak için dosyayı okuruz
-        List<User> users = loadAllUsersFromFile();
-        if (users.isEmpty()) return 1;
-        
-        int maxId = 0;
-        for (User user : users) {
-            if (user.getId() > maxId) {
-                maxId = user.getId();
-            }
-        }
-        return maxId + 1;
     }
 
     // Dosyaya yazılacak String formatını belirler
@@ -122,5 +134,34 @@ public class UserManager {
         String password = parts[2].trim();
         double goal = Double.parseDouble(parts[3].trim());
         return new User(id, name, password, goal);
+    }
+
+    public void updateUser(User updatedUser) {
+        List<User> users = loadAllUsersFromFile();
+        for (int i = 0; i < users.size(); i++) {
+            if (users.get(i).getId() == updatedUser.getId()) {
+                users.set(i, updatedUser);
+                break;
+            }
+        }
+        
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(FILE_PATH, false)); // false = overwrite
+            for (User u : users) {
+                writer.write(formatUser(u));
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.out.println("Dosya yazma hatası: " + e.getMessage());
+        } finally {
+            if (writer != null) {
+                try {
+                    writer.close();
+                } catch (IOException e) {
+                    System.out.println("Dosya kapatma hatası: " + e.getMessage());
+                }
+            }
+        }
     }
 }

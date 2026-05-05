@@ -35,11 +35,6 @@ public class RegisterView {
         passwordInput.setMaxWidth(250);
         passwordInput.setStyle("-fx-font-size: 14px; -fx-padding: 8px;");
 
-        TextField goalInput = new TextField();
-        goalInput.setPromptText("Birikim Hedefiniz (Örn: 5000)");
-        goalInput.setMaxWidth(250);
-        goalInput.setStyle("-fx-font-size: 14px; -fx-padding: 8px;");
-
         Label messageLabel = new Label();
         messageLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
 
@@ -56,12 +51,9 @@ public class RegisterView {
             try {
                 String username = usernameInput.getText();
                 String password = passwordInput.getText();
-                
-                // Kullanıcı hedef kısmına boş bırakırsa veya metin girerse NumberFormatException fırlatır
-                double goal = Double.parseDouble(goalInput.getText());
 
                 // UserManager sınıfını çağırarak kayıt işlemini yapıyoruz
-                boolean isRegistered = userManager.register(username, password, goal);
+                boolean isRegistered = userManager.register(username, password);
 
                 if (isRegistered) {
                     messageLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
@@ -70,14 +62,10 @@ public class RegisterView {
                     // İşlem başarılı olunca kutuların içini temizliyoruz
                     usernameInput.clear();
                     passwordInput.clear();
-                    goalInput.clear();
                 } else {
                     messageLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
                     messageLabel.setText("Bu kullanıcı adı zaten alınmış!");
                 }
-            } catch (NumberFormatException ex) {
-                messageLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-                messageLabel.setText("Lütfen hedefinizi sayısal bir değer girin!");
             } catch (IllegalArgumentException ex) {
                 // User sınıfı oluşturulurken fırlatılan özel hataları (şifre 6 karakterden az vb.) yakalıyoruz
                 messageLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
@@ -88,7 +76,7 @@ public class RegisterView {
         // Geri Dön butonuna basınca LoginView ekranına geçiş yap
         backButton.setOnAction(e -> app.showLogin());
 
-        layout.getChildren().addAll(titleLabel, usernameInput, passwordInput, goalInput, registerButton, backButton, messageLabel);
+        layout.getChildren().addAll(titleLabel, usernameInput, passwordInput, registerButton, backButton, messageLabel);
 
         return new Scene(layout, 450, 480);
     }
