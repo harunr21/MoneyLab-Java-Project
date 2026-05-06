@@ -17,5 +17,5 @@ target/
 users.txt
 transactions.txt
 
-# Claude Code
-.claude/
+# Claude Code guidance (local)
+CLAUDE.md
