@@ -22,8 +22,13 @@ public class DashboardView {
     private User user;
     private Balance balance;
     private TransactionManager transactionManager;
-    private ListView<String> incomeExpenseListView; // Aktif gelir/gider listesi
+    private ListView<String> incomeListView; // Aktif gelir listesi
+    private ListView<String> expenseListView; // Aktif gider listesi
     private ListView<String> historyListView; // İşlem geçmişi listesi
+    
+    // Silme işlemini doğru yapmak için RAM'de tutulan geçici listeler
+    private List<Transaction> currentIncomeList; 
+    private List<Transaction> currentExpenseList;
     private Button calculateButton; // Hedef sayfasını yenilemek için
     private Tab targetTab; // Hedef sekmesinin aktif olup olmadığını kontrol etmek için
     private GoalManager goalManager;
@@ -38,9 +43,12 @@ public class DashboardView {
         // Veri kaydetme servisimizi başlatıyoruz
         this.transactionManager = new TransactionManager();
         this.goalManager = new GoalManager();
-        this.incomeExpenseListView = new ListView<>();
+        this.incomeListView = new ListView<>();
+        this.expenseListView = new ListView<>();
         this.historyListView = new ListView<>();
         this.goalListView = new ListView<>();
+        this.currentIncomeList = new java.util.ArrayList<>();
+        this.currentExpenseList = new java.util.ArrayList<>();
 
         // Kullanıcı giriş yaptığında eski işlemlerini dosyadan yüklüyoruz
         List<Transaction> pastTransactions = transactionManager.loadUserTransactions(user.getId());
@@ -159,13 +167,13 @@ public class DashboardView {
 
         headerBox.getChildren().addAll(formTitle, formSubTitle);
 
-        // --- Gelir / Gider Seçim Butonları ---
-        HBox typeButtonsBox = new HBox(10);
+     // --- Gelir / Gider ve İşlem Geçmişi Seçim Butonları ---
+        VBox typeButtonsBox = new VBox(10);
         typeButtonsBox.setPadding(new Insets(18, 20, 5, 20));
         typeButtonsBox.setAlignment(Pos.CENTER);
 
         Button addIncomeBtn = new Button("Gelir Ekle");
-        addIncomeBtn.setPrefWidth(115);
+        addIncomeBtn.setMaxWidth(Double.MAX_VALUE);
         addIncomeBtn.setPrefHeight(36);
         addIncomeBtn.setStyle(
             "-fx-background-color: #34a853; -fx-text-fill: white; -fx-font-weight: bold; " +
@@ -173,14 +181,22 @@ public class DashboardView {
         );
 
         Button addExpenseBtn = new Button("Gider Ekle");
-        addExpenseBtn.setPrefWidth(115);
+        addExpenseBtn.setMaxWidth(Double.MAX_VALUE);
         addExpenseBtn.setPrefHeight(36);
         addExpenseBtn.setStyle(
             "-fx-background-color: #ea4335; -fx-text-fill: white; -fx-font-weight: bold; " +
             "-fx-cursor: hand; -fx-background-radius: 8; -fx-font-size: 12px;"
         );
 
-        typeButtonsBox.getChildren().addAll(addIncomeBtn, addExpenseBtn);
+        Button toggleHistoryBtn = new Button("İşlem Geçmişi");
+        toggleHistoryBtn.setMaxWidth(Double.MAX_VALUE);
+        toggleHistoryBtn.setPrefHeight(36);
+        toggleHistoryBtn.setStyle(
+            "-fx-background-color: #1a73e8; -fx-text-fill: white; -fx-font-weight: bold; " +
+            "-fx-cursor: hand; -fx-background-radius: 8; -fx-font-size: 12px;"
+        );
+
+        typeButtonsBox.getChildren().addAll(addIncomeBtn, addExpenseBtn, toggleHistoryBtn);
 
         // --- Bilgi mesajı (form görünmeden önce) ---
         VBox placeholderBox = new VBox(10);
@@ -243,14 +259,28 @@ public class DashboardView {
 
         detailGroup.getChildren().addAll(groupLabel2, amountInput, descInput, sourceInput);
 
-        // Kaydet Butonu
+     // Kaydet ve İptal Butonları
+        HBox formActionButtons = new HBox(10);
+        
+        Button cancelButton = new Button("İptal");
+        cancelButton.setMaxWidth(Double.MAX_VALUE);
+        cancelButton.setPrefHeight(38);
+        HBox.setHgrow(cancelButton, Priority.ALWAYS);
+        cancelButton.setStyle(
+            "-fx-background-color: transparent; -fx-text-fill: #555; " +
+            "-fx-font-weight: bold; -fx-cursor: hand; -fx-border-color: #ccc; -fx-border-radius: 8; -fx-font-size: 13px;"
+        );
+
         Button addButton = new Button("Kaydet");
         addButton.setMaxWidth(Double.MAX_VALUE);
         addButton.setPrefHeight(38);
+        HBox.setHgrow(addButton, Priority.ALWAYS);
         addButton.setStyle(
             "-fx-background-color: linear-gradient(to right, #1a73e8, #4285f4); -fx-text-fill: white; " +
             "-fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8; -fx-font-size: 13px;"
         );
+        
+        formActionButtons.getChildren().addAll(cancelButton, addButton);
 
         Label errorLabel = new Label();
         errorLabel.setStyle("-fx-text-fill: #ea4335; -fx-font-size: 11px; -fx-padding: 5 0 0 0;");
@@ -261,8 +291,27 @@ public class DashboardView {
         sep1.setPadding(new Insets(2, 0, 2, 0));
 
         formControls.getChildren().addAll(
-            dateTimeGroup, sep1, detailGroup, addButton, errorLabel
+            dateTimeGroup, sep1, detailGroup, formActionButtons, errorLabel
         );
+        
+        // İptal Butonu Tıklanma Mantığı
+        cancelButton.setOnAction(e -> {
+            formControls.setVisible(false);
+            formControls.setManaged(false);
+            placeholderBox.setVisible(true);
+            placeholderBox.setManaged(true);
+            
+            // Ana butonları geri getir
+            addIncomeBtn.setVisible(true); addIncomeBtn.setManaged(true);
+            addExpenseBtn.setVisible(true); addExpenseBtn.setManaged(true);
+            
+            formTitle.setText("Yeni İşlem Ekle");
+            formSubTitle.setText("Gelir veya gider türünü seçerek başlayın");
+            errorLabel.setText("");
+            amountInput.clear();
+            descInput.clear();
+            sourceInput.clear();
+        });
 
         final String[] currentType = {""};
 
@@ -271,19 +320,14 @@ public class DashboardView {
             formControls.setManaged(true);
             placeholderBox.setVisible(false);
             placeholderBox.setManaged(false);
+            
+            // Butonları gizle (Aşağı kaydırma ihtiyacını kaldırmak için)
+            addIncomeBtn.setVisible(false); addIncomeBtn.setManaged(false);
+            addExpenseBtn.setVisible(false); addExpenseBtn.setManaged(false);
+            
             currentType[0] = "Gelir";
             formTitle.setText("Yeni Gelir Ekle");
             formSubTitle.setText("Gelir bilgilerini aşağıya girin");
-            // Gelir seçiliyken buton stillerini güncelle
-            addIncomeBtn.setStyle(
-                "-fx-background-color: #2d8f47; -fx-text-fill: white; -fx-font-weight: bold; " +
-                "-fx-cursor: hand; -fx-background-radius: 8; -fx-font-size: 12px; " +
-                "-fx-border-color: #fff; -fx-border-width: 2; -fx-border-radius: 8;"
-            );
-            addExpenseBtn.setStyle(
-                "-fx-background-color: #ea4335; -fx-text-fill: white; -fx-font-weight: bold; " +
-                "-fx-cursor: hand; -fx-background-radius: 8; -fx-font-size: 12px;"
-            );
         });
 
         addExpenseBtn.setOnAction(e -> {
@@ -291,19 +335,14 @@ public class DashboardView {
             formControls.setManaged(true);
             placeholderBox.setVisible(false);
             placeholderBox.setManaged(false);
+            
+            // Butonları gizle
+            addIncomeBtn.setVisible(false); addIncomeBtn.setManaged(false);
+            addExpenseBtn.setVisible(false); addExpenseBtn.setManaged(false);
+            
             currentType[0] = "Gider";
             formTitle.setText("Yeni Gider Ekle");
             formSubTitle.setText("Gider bilgilerini aşağıya girin");
-            // Gider seçiliyken buton stillerini güncelle
-            addExpenseBtn.setStyle(
-                "-fx-background-color: #c5221f; -fx-text-fill: white; -fx-font-weight: bold; " +
-                "-fx-cursor: hand; -fx-background-radius: 8; -fx-font-size: 12px; " +
-                "-fx-border-color: #fff; -fx-border-width: 2; -fx-border-radius: 8;"
-            );
-            addIncomeBtn.setStyle(
-                "-fx-background-color: #34a853; -fx-text-fill: white; -fx-font-weight: bold; " +
-                "-fx-cursor: hand; -fx-background-radius: 8; -fx-font-size: 12px;"
-            );
         });
 
         // ScrollPane ile küçük ekranlarda da kaydırılabilir olması
@@ -317,25 +356,53 @@ public class DashboardView {
         transactionsLayout.setLeft(formBox);
 
         // İşlemlerim -> Sağ Taraf: İki Liste (Gelir-Gider ve İşlem Geçmişi)
-        HBox listsBox = new HBox(16);
-        listsBox.setPadding(new Insets(16));
-        listsBox.setStyle("-fx-background-color: #f0f2f5;");
+     // İşlemlerim -> Sağ Taraf: StackPane (Aç/Kapa Mantığı İçin)
+        StackPane listsContainer = new StackPane();
+        listsContainer.setPadding(new Insets(16));
+        listsContainer.setStyle("-fx-background-color: #f0f2f5;");
 
+        // --- 1. GELİR VE GİDER BLOĞU (VARSAYILAN) ---
         VBox activeBox = new VBox(0);
-        HBox.setHgrow(activeBox, Priority.ALWAYS);
         activeBox.setStyle("-fx-background-color: white; -fx-background-radius: 12;");
         activeBox.setEffect(new DropShadow(8, Color.rgb(0, 0, 0, 0.06)));
 
         HBox activeTitleBar = new HBox();
         activeTitleBar.setPadding(new Insets(12, 16, 12, 16));
         activeTitleBar.setStyle("-fx-background-color: linear-gradient(to right, #1a73e8, #4285f4); -fx-background-radius: 12 12 0 0;");
-        Label activeTitle = new Label("Gelir / Gider Listesi");
+        Label activeTitle = new Label("Gelir ve Gider Listeleri");
         activeTitle.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: white;");
         activeTitleBar.getChildren().add(activeTitle);
 
-        incomeExpenseListView.setStyle("-fx-background-radius: 0; -fx-border-width: 0;");
-        VBox.setVgrow(incomeExpenseListView, Priority.ALWAYS);
-        
+        // İç listeleri tutacak yatay kutu (Sola gelir, sağa gider)
+        HBox dualListsBox = new HBox(10);
+        dualListsBox.setPadding(new Insets(10));
+        VBox.setVgrow(dualListsBox, Priority.ALWAYS);
+
+        // Gelir Listesi Kutusu
+        VBox incomeCol = new VBox(0);
+        HBox.setHgrow(incomeCol, Priority.ALWAYS);
+        incomeCol.setStyle("-fx-border-color: #e0e0e0; -fx-border-radius: 8;");
+        Label incTitle = new Label("Gelir Listesi");
+        incTitle.setStyle("-fx-font-weight: bold; -fx-padding: 8; -fx-background-color: #e8f5e9; -fx-background-radius: 8 8 0 0;");
+        incTitle.setMaxWidth(Double.MAX_VALUE);
+        incomeListView.setStyle("-fx-background-radius: 0 0 8 8; -fx-border-width: 0;");
+        VBox.setVgrow(incomeListView, Priority.ALWAYS);
+        incomeCol.getChildren().addAll(incTitle, incomeListView);
+
+        // Gider Listesi Kutusu
+        VBox expenseCol = new VBox(0);
+        HBox.setHgrow(expenseCol, Priority.ALWAYS);
+        expenseCol.setStyle("-fx-border-color: #e0e0e0; -fx-border-radius: 8;");
+        Label expTitle = new Label("Gider Listesi");
+        expTitle.setStyle("-fx-font-weight: bold; -fx-padding: 8; -fx-background-color: #ffebee; -fx-background-radius: 8 8 0 0;");
+        expTitle.setMaxWidth(Double.MAX_VALUE);
+        expenseListView.setStyle("-fx-background-radius: 0 0 8 8; -fx-border-width: 0;");
+        VBox.setVgrow(expenseListView, Priority.ALWAYS);
+        expenseCol.getChildren().addAll(expTitle, expenseListView);
+
+        dualListsBox.getChildren().addAll(incomeCol, expenseCol);
+
+        // Ortak Silme Butonu
         Button deleteButton = new Button("Seçili İşlemi Sil");
         deleteButton.setMaxWidth(Double.MAX_VALUE);
         deleteButton.setPrefHeight(36);
@@ -343,10 +410,15 @@ public class DashboardView {
             "-fx-background-color: #ea4335; -fx-text-fill: white; -fx-font-weight: bold; " +
             "-fx-cursor: hand; -fx-background-radius: 0 0 12 12; -fx-font-size: 12px;"
         );
-        activeBox.getChildren().addAll(activeTitleBar, incomeExpenseListView, deleteButton);
+        activeBox.getChildren().addAll(activeTitleBar, dualListsBox, deleteButton);
 
+        // Aynı anda iki listeden seçim yapılmasını engelleme mantığı
+        incomeListView.setOnMouseClicked(ev -> expenseListView.getSelectionModel().clearSelection());
+        expenseListView.setOnMouseClicked(ev -> incomeListView.getSelectionModel().clearSelection());
+
+        // --- 2. İŞLEM GEÇMİŞİ BLOĞU (GİZLİ) ---
         VBox historyBox = new VBox(0);
-        HBox.setHgrow(historyBox, Priority.ALWAYS);
+        historyBox.setVisible(false); // Başlangıçta gizli
         historyBox.setStyle("-fx-background-color: white; -fx-background-radius: 12;");
         historyBox.setEffect(new DropShadow(8, Color.rgb(0, 0, 0, 0.06)));
 
@@ -361,11 +433,25 @@ public class DashboardView {
         VBox.setVgrow(historyListView, Priority.ALWAYS);
         historyBox.getChildren().addAll(historyTitleBar, historyListView);
 
-        listsBox.getChildren().addAll(activeBox, historyBox);
-        transactionsLayout.setCenter(listsBox);
-
+        // Blokları Konteynere Ekle
+        listsContainer.getChildren().addAll(historyBox, activeBox); // activeBox üstte görünecek
+        transactionsLayout.setCenter(listsContainer);
         transactionsTab.setContent(transactionsLayout);
 
+        // Buton Etkileşimi: İşlem Geçmişini Aç / Kapa
+        final boolean[] isHistoryVisible = {false};
+        toggleHistoryBtn.setOnAction(e -> {
+            isHistoryVisible[0] = !isHistoryVisible[0];
+            if (isHistoryVisible[0]) {
+                activeBox.setVisible(false);
+                historyBox.setVisible(true);
+                toggleHistoryBtn.setText("Gelir/Gider Listesine Dön");
+            } else {
+                activeBox.setVisible(true);
+                historyBox.setVisible(false);
+                toggleHistoryBtn.setText("İşlem Geçmişi");
+            }
+        });
         // --- ÜÇÜNCÜ SEKME: HEDEFLERİM ---
         targetTab = new Tab("Hedef");
         BorderPane targetMainLayout = new BorderPane();
@@ -608,12 +694,22 @@ public class DashboardView {
                 // 3. Tarihçeye kaydet
                 transactionManager.saveToHistory(user.getId(), transaction);
                 
-                // 4. Ekrandaki grafiği ve listeyi hemen güncelle
+             // 4. Ekrandaki grafiği ve listeyi hemen güncelle
                 updateDashboard(balanceLabel, pieChart, tabPane);
 
                 amountInput.clear();
                 descInput.clear();
                 sourceInput.clear();
+
+                // Formu kapat, butonları ve yer tutucuyu geri getir
+                formControls.setVisible(false);
+                formControls.setManaged(false);
+                placeholderBox.setVisible(true);
+                placeholderBox.setManaged(true);
+                addIncomeBtn.setVisible(true); addIncomeBtn.setManaged(true);
+                addExpenseBtn.setVisible(true); addExpenseBtn.setManaged(true);
+                formTitle.setText("Yeni İşlem Ekle");
+                formSubTitle.setText("Gelir veya gider türünü seçerek başlayın");
 
             } catch (NumberFormatException ex) {
                 errorLabel.setText("Lütfen sayısal bir miktar girin!");
@@ -622,28 +718,29 @@ public class DashboardView {
             }
         });
 
-        // =========================================================================
-        // 4. İŞLEM SİLME MANTIĞI
+     // =========================================================================
+        // 4. İŞLEM SİLME MANTIĞI (DİNAMİK)
         // =========================================================================
         deleteButton.setOnAction(e -> {
-            // Kullanıcının ListView'da kaçıncı satırı seçtiğini buluyoruz
-            int selectedIndex = incomeExpenseListView.getSelectionModel().getSelectedIndex();
+            int incIndex = incomeListView.getSelectionModel().getSelectedIndex();
+            int expIndex = expenseListView.getSelectionModel().getSelectedIndex();
             
-            if (selectedIndex >= 0) {
-                List<Transaction> baseList = balance.getTransactions();
-                
-                if (selectedIndex < baseList.size()) {
-                    Transaction toRemove = baseList.get(selectedIndex);
-                    
-                    // 1. Orijinal işlemi bakiyeden (RAM'den) sil
-                    balance.removeTransaction(toRemove);
-                    
-                    // 2. Dosyayı (transactions.txt) o işlem olmadan baştan yaz
-                    transactionManager.rewriteUserTransactions(user.getId(), balance.getTransactions());
-                    
-                    // 3. Ekranı güncelle (İşlem geçmişine dokunulmaz)
-                    updateDashboard(balanceLabel, pieChart, tabPane);
-                }
+            Transaction toRemove = null;
+
+            // Hangi listeden seçim yapıldıysa o nesneyi buluyoruz
+            if (incIndex >= 0 && incIndex < currentIncomeList.size()) {
+                toRemove = currentIncomeList.get(incIndex);
+            } else if (expIndex >= 0 && expIndex < currentExpenseList.size()) {
+                toRemove = currentExpenseList.get(expIndex);
+            }
+
+            if (toRemove != null) {
+                // 1. Orijinal işlemi bakiyeden (RAM'den) sil
+                balance.removeTransaction(toRemove);
+                // 2. Dosyayı (transactions.txt) o işlem olmadan baştan yaz
+                transactionManager.rewriteUserTransactions(user.getId(), balance.getTransactions());
+                // 3. Ekranı güncelle
+                updateDashboard(balanceLabel, pieChart, tabPane);
             }
         });
 
@@ -671,8 +768,12 @@ public class DashboardView {
             }
         }
 
-        // Aktif Gelir/Gider listesini güncelle (Sadece base işlemleri gösteriyoruz, silme yapılabilmesi için)
-        incomeExpenseListView.getItems().clear();
+     // Aktif Gelir/Gider listelerini güncelle
+        incomeListView.getItems().clear();
+        expenseListView.getItems().clear();
+        currentIncomeList.clear();
+        currentExpenseList.clear();
+        
         List<Transaction> baseList = balance.getTransactions();
 
         for (Transaction t : baseList) {
@@ -686,12 +787,13 @@ public class DashboardView {
             }
 
             if (t instanceof Income) {
-                incomeExpenseListView.getItems().add("[+] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
+                incomeListView.getItems().add("[+] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
+                currentIncomeList.add(t); // İndeks uyumu için RAM'e ekle
             } else if (t instanceof Expense) {
-                incomeExpenseListView.getItems().add("[-] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
+                expenseListView.getItems().add("[-] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
+                currentExpenseList.add(t); // İndeks uyumu için RAM'e ekle
             }
         }
-
         // İşlem geçmişi listesini güncelle
         historyListView.getItems().clear();
         List<Transaction> historyList = transactionManager.loadUserHistory(user.getId());
