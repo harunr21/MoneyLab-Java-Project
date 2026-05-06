@@ -3,3 +3,4 @@
 1,bilgisayar,5465.0
 1,denene,754133.0
 1,hata,32164.0
+1,denenen,65412.0
