@@ -38,9 +38,13 @@ public class DashboardView {
     // --- Rapor Sekmesi Grafikleri ---
     private javafx.scene.chart.LineChart<String, Number> balanceChart;
     private javafx.scene.chart.LineChart<String, Number> goalsChart;
-    
+
     private Label totalIncomeSummaryLabel;
     private Label totalExpenseSummaryLabel;
+
+    private static final java.text.DecimalFormat MONEY_FMT =
+        new java.text.DecimalFormat("#,##0.##",
+            new java.text.DecimalFormatSymbols(java.util.Locale.of("tr", "TR")));
     
     public DashboardView(MainApp app, User user) {
         this.app = app;
@@ -607,6 +611,7 @@ public class DashboardView {
                 goalManager.saveGoal(user.getId(), newGoal);
                 userGoals.add(newGoal);
                 refreshGoalList();
+                refreshGoalsChart();
 
                 goalNameInput.clear();
                 goalAmountInput.clear();
@@ -624,6 +629,7 @@ public class DashboardView {
                 userGoals.remove(selectedIndex);
                 goalManager.rewriteUserGoals(user.getId(), userGoals);
                 refreshGoalList();
+                refreshGoalsChart();
             }
         });
         
@@ -634,7 +640,7 @@ public class DashboardView {
             
             // Hedef tarihteki toplam bakiye
             double projectedTotal = balance.getTotalBalance(targetDate);
-            projectedBalanceLabel.setText(monthsAhead + " Ay Sonraki Bakiye: " + String.format("%.2f", projectedTotal) + " TL");
+            projectedBalanceLabel.setText(monthsAhead + " Ay Sonraki Bakiye: " + MONEY_FMT.format(projectedTotal) + " TL");
         });
 
         // Sayfa açıldığında ilk hesaplamayı varsayılan ay değeriyle (1 ay) çalıştırıyoruz
@@ -646,6 +652,7 @@ public class DashboardView {
         // Hedef sekmesine her tıklandığında hedef listesini ve bakiye hesabını güncelle
         tabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
             if (newTab == targetTab) {
+                userGoals = goalManager.loadUserGoals(user.getId());
                 refreshGoalList();
                 calculateButton.fire();
             }
@@ -861,6 +868,7 @@ public class DashboardView {
             btnGoalsReport.setStyle(activeBtnStyle);
             btnBalanceReport.setStyle(reportBtnStyle);
             btnIncomeExpenseReport.setStyle(reportBtnStyle);
+            refreshGoalsChart();
             goalsChart.setVisible(true);
             balanceChart.setVisible(false);
             pieChart.setVisible(false);
@@ -875,7 +883,7 @@ public class DashboardView {
     // Ekrandaki bakiyeyi, pasta grafiğini ve geçmiş listesini güncelleyen metod
     private void updateDashboard(Label balanceLabel, PieChart pieChart, TabPane tabPane) {
         
-        balanceLabel.setText("Mevcut Bakiye: " + balance.getTotalBalance() + " TL");
+        balanceLabel.setText("Mevcut Bakiye: " + MONEY_FMT.format(balance.getTotalBalance()) + " TL");
 
         // Gelir/Gider toplamları için çoğaltılmış (expanded) işlemleri kullanıyoruz
         // Bu sayede tekrarlanan işlemler (aylık, haftalık vb.) toplama doğru yansır
@@ -890,8 +898,8 @@ public class DashboardView {
             }
         }
      // Ana sayfadaki özet etiketlerini güncelle
-        totalIncomeSummaryLabel.setText("+ " + totalIncome + " TL");
-        totalExpenseSummaryLabel.setText("- " + totalExpense + " TL");
+        totalIncomeSummaryLabel.setText("+ " + MONEY_FMT.format(totalIncome) + " TL");
+        totalExpenseSummaryLabel.setText("- " + MONEY_FMT.format(totalExpense) + " TL");
      // Aktif Gelir/Gider listelerini güncelle
         incomeListView.getItems().clear();
         expenseListView.getItems().clear();
@@ -911,10 +919,10 @@ public class DashboardView {
             }
 
             if (t instanceof Income) {
-                incomeListView.getItems().add("[+] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
+                incomeListView.getItems().add("[+] " + MONEY_FMT.format(t.getAmount()) + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
                 currentIncomeList.add(t); // İndeks uyumu için RAM'e ekle
             } else if (t instanceof Expense) {
-                expenseListView.getItems().add("[-] " + t.getAmount() + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
+                expenseListView.getItems().add("[-] " + MONEY_FMT.format(t.getAmount()) + " TL - " + t.getDescription() + freqDisplay + sourceDisplay + " (" + t.getDate() + ")");
                 currentExpenseList.add(t); // İndeks uyumu için RAM'e ekle
             }
         }
@@ -931,16 +939,16 @@ public class DashboardView {
         for (Transaction t : historyList) {
             String typeStr = (t instanceof Income) ? "Gelir İşlendi: " : "Gider İşlendi: ";
             String prefix = (t instanceof Income) ? "[+]" : "[-]";
-            historyListView.getItems().add(prefix + " " + typeStr + t.getAmount() + " TL - " + t.getDescription() + " (" + t.getDate() + ")");
+            historyListView.getItems().add(prefix + " " + typeStr + MONEY_FMT.format(t.getAmount()) + " TL - " + t.getDescription() + " (" + t.getDate() + ")");
         }
 
         // Grafik verilerini güncelle
         ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
         if (totalIncome > 0) {
-            pieChartData.add(new PieChart.Data("Gelirler (" + totalIncome + " TL)", totalIncome));
+            pieChartData.add(new PieChart.Data("Gelirler (" + MONEY_FMT.format(totalIncome) + " TL)", totalIncome));
         }
         if (totalExpense > 0) {
-            pieChartData.add(new PieChart.Data("Giderler (" + totalExpense + " TL)", totalExpense));
+            pieChartData.add(new PieChart.Data("Giderler (" + MONEY_FMT.format(totalExpense) + " TL)", totalExpense));
         }
 
         pieChart.setData(pieChartData);
@@ -971,53 +979,52 @@ public class DashboardView {
             javafx.scene.chart.XYChart.Series<String, Number> balanceSeries = new javafx.scene.chart.XYChart.Series<>();
             balanceSeries.setName("Bakiye Trendi");
             
-            List<Transaction> historyData = transactionManager.loadUserHistory(user.getId());
+            List<Transaction> historyData = balance.getExpandedTransactions(); // zaten tarihe göre sıralı
             double runningBalance = 0;
-            // Listeyi tarih sırasına göre eski->yeni şeklinde işlemek için tersten okuyoruz (eğer reverse edildiyse)
-            for (int i = historyData.size() - 1; i >= 0; i--) {
-                Transaction t = historyData.get(i);
+            java.util.LinkedHashMap<String, Double> dailyBalance = new java.util.LinkedHashMap<>();
+            for (Transaction t : historyData) {
                 if (t instanceof Income) runningBalance += t.getAmount();
                 else if (t instanceof Expense) runningBalance -= t.getAmount();
-                
-                balanceSeries.getData().add(new javafx.scene.chart.XYChart.Data<String, Number>(t.getDate().toString(), runningBalance));
+                dailyBalance.put(t.getDate().toString(), runningBalance);
+            }
+            for (java.util.Map.Entry<String, Double> entry : dailyBalance.entrySet()) {
+                balanceSeries.getData().add(new javafx.scene.chart.XYChart.Data<String, Number>(entry.getKey(), entry.getValue()));
             }
             balanceChart.getData().add(balanceSeries);
         }
 
         // 2. Rapor - Hedef İlerleme Grafiği
-        if (goalsChart != null) {
-            goalsChart.getData().clear();
-            javafx.scene.chart.XYChart.Series<String, Number> totalGoalsSeries = new javafx.scene.chart.XYChart.Series<>();
-            totalGoalsSeries.setName("Toplam Hedefler");
-            
-            javafx.scene.chart.XYChart.Series<String, Number> completedGoalsSeries = new javafx.scene.chart.XYChart.Series<>();
-            completedGoalsSeries.setName("Tamamlanan Hedefler");
-            
-            List<Goal> allGoals = goalManager.loadUserGoals(user.getId());
-            int totalGoalCount = 0;
-            int completedGoalCount = 0;
-            
-            // Not: Mevcut Goal modelinde 'eklenme tarihi' olmadığı için, zamana göre grafiği şimdilik 
-            // hedeflerin listeye eklenme sırasına (Aşama 1, Aşama 2) göre çizdiriyoruz.
-            for (int i = 0; i < allGoals.size(); i++) {
-                Goal g = allGoals.get(i);
-                totalGoalCount++;
-                if (balance.getTotalBalance() >= g.getTargetAmount()) {
-                    completedGoalCount++;
-                }
-                
-                String stepStr = "Adım " + (i + 1);
-                totalGoalsSeries.getData().add(new javafx.scene.chart.XYChart.Data<String, Number>(stepStr, totalGoalCount));
-                completedGoalsSeries.getData().add(new javafx.scene.chart.XYChart.Data<String, Number>(stepStr, completedGoalCount));
-            }
-            goalsChart.getData().addAll(totalGoalsSeries, completedGoalsSeries);
-        }
+        refreshGoalsChart();
     }
 
     /**
      * Hedef listesini (goalListView) güncel verilerle yeniden doldurur.
      * Her hedef için mevcut bakiyeye göre ilerleme durumunu hesaplar ve gösterir.
      */
+    private void refreshGoalsChart() {
+        if (goalsChart == null) return;
+        goalsChart.getData().clear();
+        javafx.scene.chart.XYChart.Series<String, Number> totalGoalsSeries = new javafx.scene.chart.XYChart.Series<>();
+        totalGoalsSeries.setName("Toplam Hedefler");
+        javafx.scene.chart.XYChart.Series<String, Number> completedGoalsSeries = new javafx.scene.chart.XYChart.Series<>();
+        completedGoalsSeries.setName("Tamamlanan Hedefler");
+
+        List<Goal> allGoals = goalManager.loadUserGoals(user.getId());
+        int totalGoalCount = 0;
+        int completedGoalCount = 0;
+        for (int i = 0; i < allGoals.size(); i++) {
+            Goal g = allGoals.get(i);
+            totalGoalCount++;
+            if (balance.getTotalBalance() >= g.getTargetAmount()) {
+                completedGoalCount++;
+            }
+            String stepStr = "Adım " + (i + 1);
+            totalGoalsSeries.getData().add(new javafx.scene.chart.XYChart.Data<>(stepStr, totalGoalCount));
+            completedGoalsSeries.getData().add(new javafx.scene.chart.XYChart.Data<>(stepStr, completedGoalCount));
+        }
+        goalsChart.getData().addAll(totalGoalsSeries, completedGoalsSeries);
+    }
+
     private void refreshGoalList() {
         goalListView.getItems().clear();
         double currentBalance = balance.getTotalBalance();
@@ -1035,7 +1042,7 @@ public class DashboardView {
             }
 
             goalListView.getItems().add(
-                goal.getName() + "  |  " + goal.getTargetAmount() + " TL  |  " + status
+                goal.getName() + "  |  " + MONEY_FMT.format(goal.getTargetAmount()) + " TL  |  " + status
             );
         }
     }

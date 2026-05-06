@@ -16,3 +16,6 @@ target/
 # Kullanıcı Veritabanı ve İşlemler (Veri Dosyaları)
 users.txt
 transactions.txt
+
+# Claude Code guidance (local)
+CLAUDE.md
