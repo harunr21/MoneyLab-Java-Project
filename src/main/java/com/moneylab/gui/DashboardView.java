@@ -34,7 +34,14 @@ public class DashboardView {
     private GoalManager goalManager;
     private ListView<String> goalListView; // Hedef listesi
     private List<Goal> userGoals; // Kullanıcının hedefleri (RAM)
-
+    
+    // --- Rapor Sekmesi Grafikleri ---
+    private javafx.scene.chart.LineChart<String, Number> balanceChart;
+    private javafx.scene.chart.LineChart<String, Number> goalsChart;
+    
+    private Label totalIncomeSummaryLabel;
+    private Label totalExpenseSummaryLabel;
+    
     public DashboardView(MainApp app, User user) {
         this.app = app;
         this.user = user;
@@ -110,7 +117,7 @@ public class DashboardView {
         pieChart.setLabelsVisible(true);
 
         // --- İLK SEKME: GENEL VARLIKLARIM ---
-        Tab assetsTab = new Tab("Genel Varlıklarım");
+        Tab assetsTab = new Tab("Ana Sayfa");
         VBox assetsLayout = new VBox(20);
         assetsLayout.setAlignment(Pos.CENTER);
         assetsLayout.setPadding(new Insets(30));
@@ -128,6 +135,19 @@ public class DashboardView {
         Label balanceTitle = new Label("Toplam Bakiye");
         balanceTitle.setStyle("-fx-font-size: 13px; -fx-text-fill: #777;");
         balanceCard.getChildren().addAll(balanceTitle, balanceLabel);
+     // Gelir ve Gider özet etiketleri
+        totalIncomeSummaryLabel = new Label("+ 0.0 TL");
+        totalExpenseSummaryLabel = new Label("- 0.0 TL");
+
+        totalIncomeSummaryLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 18px; -fx-font-weight: bold;");
+        totalExpenseSummaryLabel.setStyle("-fx-text-fill: #F44336; -fx-font-size: 18px; -fx-font-weight: bold;");
+
+        HBox summaryBox = new HBox(40);
+        summaryBox.setAlignment(Pos.CENTER);
+        summaryBox.getChildren().addAll(totalExpenseSummaryLabel, totalIncomeSummaryLabel);
+
+        // Bakiye kartına özetleri ekle
+        balanceCard.getChildren().add(summaryBox);
 
         // Grafik kartı
         VBox chartCard = new VBox(0);
@@ -746,6 +766,108 @@ public class DashboardView {
 
         // Ekran açılırken grafikleri ve geçmiş listesini ilk kez dolduruyoruz
         updateDashboard(balanceLabel, pieChart, tabPane);
+        
+     // =========================================================================
+        // --- DÖRDÜNCÜ SEKME: RAPOR ---
+        // =========================================================================
+        Tab reportTab = new Tab("Rapor");
+        reportTab.setClosable(false); // Sekmenin yanlışlıkla kapatılmasını engelle
+        BorderPane reportLayout = new BorderPane();
+        reportLayout.setStyle("-fx-background-color: #f4f6f9;");
+
+        // Sol Menü (Navigasyon Butonları)
+        VBox reportMenu = new VBox(10);
+        reportMenu.setPadding(new Insets(20));
+        reportMenu.setPrefWidth(200);
+        reportMenu.setStyle("-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 0 1 0 0;");
+
+        Button btnBalanceReport = new Button("Bakiye");
+        Button btnIncomeExpenseReport = new Button("Gelir / Gider");
+        Button btnGoalsReport = new Button("Hedefler");
+
+        String reportBtnStyle = "-fx-background-color: transparent; -fx-text-fill: #555; -fx-font-weight: bold; -fx-font-size: 14px; -fx-alignment: BASELINE_LEFT; -fx-padding: 10 15; -fx-cursor: hand;";
+        String activeBtnStyle = "-fx-background-color: #e8f0fe; -fx-text-fill: #1a73e8; -fx-font-weight: bold; -fx-font-size: 14px; -fx-alignment: BASELINE_LEFT; -fx-padding: 10 15; -fx-cursor: hand; -fx-background-radius: 8;";
+
+        btnBalanceReport.setStyle(activeBtnStyle); // Varsayılan olarak Bakiye açık başlasın
+        btnIncomeExpenseReport.setStyle(reportBtnStyle);
+        btnGoalsReport.setStyle(reportBtnStyle);
+
+        btnBalanceReport.setMaxWidth(Double.MAX_VALUE);
+        btnIncomeExpenseReport.setMaxWidth(Double.MAX_VALUE);
+        btnGoalsReport.setMaxWidth(Double.MAX_VALUE);
+
+        reportMenu.getChildren().addAll(btnBalanceReport, btnIncomeExpenseReport, btnGoalsReport);
+        reportLayout.setLeft(reportMenu);
+
+        // Sağ Panel (Dinamik Grafik Alanı)
+        StackPane reportContentArea = new StackPane();
+        reportContentArea.setPadding(new Insets(20));
+        reportContentArea.setStyle("-fx-background-color: white; -fx-background-radius: 12;");
+        reportContentArea.setEffect(new javafx.scene.effect.DropShadow(8, javafx.scene.paint.Color.rgb(0, 0, 0, 0.06)));
+        BorderPane.setMargin(reportContentArea, new Insets(20));
+
+        // 1. Bakiye Grafiği (Line Chart)
+        javafx.scene.chart.CategoryAxis xAxisBalance = new javafx.scene.chart.CategoryAxis();
+        xAxisBalance.setLabel("Zaman");
+        javafx.scene.chart.NumberAxis yAxisBalance = new javafx.scene.chart.NumberAxis();
+        yAxisBalance.setLabel("Bakiye Tutarı (TL)");
+        balanceChart = new javafx.scene.chart.LineChart<>(xAxisBalance, yAxisBalance);
+        balanceChart.setTitle("Zamana Göre Bakiye Değişimi");
+        balanceChart.setLegendVisible(false);
+        balanceChart.setAnimated(false); // Arka planda çizim hatasını önler
+
+        // 2. Gelir/Gider Grafiği (AKTARMASI)
+        // Genel Varlıklar'daki mevcut 'pieChart' objesini alıp doğrudan bu StackPane içine yerleştiriyoruz.
+        // Bu işlem onu eski yerinden koparıp buraya taşıyacaktır.
+        pieChart.setVisible(false); // Başlangıçta gizli başlasın
+
+        // 3. Hedef Grafiği (Multi-Line Chart)
+        javafx.scene.chart.CategoryAxis xAxisGoals = new javafx.scene.chart.CategoryAxis();
+        xAxisGoals.setLabel("Hedef Gelişimi");
+        javafx.scene.chart.NumberAxis yAxisGoals = new javafx.scene.chart.NumberAxis();
+        yAxisGoals.setLabel("Hedef Sayısı");
+        yAxisGoals.setMinorTickVisible(false);
+        yAxisGoals.setTickUnit(1);
+        goalsChart = new javafx.scene.chart.LineChart<>(xAxisGoals, yAxisGoals);
+        goalsChart.setTitle("Hedef Tamamlama İlerlemesi");
+        goalsChart.setVisible(false);
+        goalsChart.setAnimated(false); // Arka planda çizim hatasını önler
+
+        // Tüm grafikleri sağ panele ekliyoruz
+        reportContentArea.getChildren().addAll(balanceChart, pieChart, goalsChart);
+        reportLayout.setCenter(reportContentArea);
+        reportTab.setContent(reportLayout);
+
+        // Buton Tıklanma Etkileşimleri (Görünürlükleri Değiştirme)
+        btnBalanceReport.setOnAction(e -> {
+            btnBalanceReport.setStyle(activeBtnStyle);
+            btnIncomeExpenseReport.setStyle(reportBtnStyle);
+            btnGoalsReport.setStyle(reportBtnStyle);
+            balanceChart.setVisible(true);
+            pieChart.setVisible(false);
+            goalsChart.setVisible(false);
+        });
+
+        btnIncomeExpenseReport.setOnAction(e -> {
+            btnIncomeExpenseReport.setStyle(activeBtnStyle);
+            btnBalanceReport.setStyle(reportBtnStyle);
+            btnGoalsReport.setStyle(reportBtnStyle);
+            pieChart.setVisible(true);
+            balanceChart.setVisible(false);
+            goalsChart.setVisible(false);
+        });
+
+        btnGoalsReport.setOnAction(e -> {
+            btnGoalsReport.setStyle(activeBtnStyle);
+            btnBalanceReport.setStyle(reportBtnStyle);
+            btnIncomeExpenseReport.setStyle(reportBtnStyle);
+            goalsChart.setVisible(true);
+            balanceChart.setVisible(false);
+            pieChart.setVisible(false);
+        });
+
+        // Sekmeyi sisteme ekle
+        tabPane.getTabs().add(reportTab);
 
         return new Scene(rootLayout, 950, 600);
     }
@@ -767,7 +889,9 @@ public class DashboardView {
                 totalExpense += t.getAmount();
             }
         }
-
+     // Ana sayfadaki özet etiketlerini güncelle
+        totalIncomeSummaryLabel.setText("+ " + totalIncome + " TL");
+        totalExpenseSummaryLabel.setText("- " + totalExpense + " TL");
      // Aktif Gelir/Gider listelerini güncelle
         incomeListView.getItems().clear();
         expenseListView.getItems().clear();
@@ -836,6 +960,57 @@ public class DashboardView {
             if (selectedTab == targetTab) {
                 calculateButton.fire();
             }
+        }
+     // =========================================================
+        // RAPOR SEKME GRAFİKLERİNİ GÜNCELLE
+        // =========================================================
+
+        // 1. Rapor - Zamana Göre Bakiye Değişimi
+        if (balanceChart != null) {
+            balanceChart.getData().clear();
+            javafx.scene.chart.XYChart.Series<String, Number> balanceSeries = new javafx.scene.chart.XYChart.Series<>();
+            balanceSeries.setName("Bakiye Trendi");
+            
+            List<Transaction> historyData = transactionManager.loadUserHistory(user.getId());
+            double runningBalance = 0;
+            // Listeyi tarih sırasına göre eski->yeni şeklinde işlemek için tersten okuyoruz (eğer reverse edildiyse)
+            for (int i = historyData.size() - 1; i >= 0; i--) {
+                Transaction t = historyData.get(i);
+                if (t instanceof Income) runningBalance += t.getAmount();
+                else if (t instanceof Expense) runningBalance -= t.getAmount();
+                
+                balanceSeries.getData().add(new javafx.scene.chart.XYChart.Data<String, Number>(t.getDate().toString(), runningBalance));
+            }
+            balanceChart.getData().add(balanceSeries);
+        }
+
+        // 2. Rapor - Hedef İlerleme Grafiği
+        if (goalsChart != null) {
+            goalsChart.getData().clear();
+            javafx.scene.chart.XYChart.Series<String, Number> totalGoalsSeries = new javafx.scene.chart.XYChart.Series<>();
+            totalGoalsSeries.setName("Toplam Hedefler");
+            
+            javafx.scene.chart.XYChart.Series<String, Number> completedGoalsSeries = new javafx.scene.chart.XYChart.Series<>();
+            completedGoalsSeries.setName("Tamamlanan Hedefler");
+            
+            List<Goal> allGoals = goalManager.loadUserGoals(user.getId());
+            int totalGoalCount = 0;
+            int completedGoalCount = 0;
+            
+            // Not: Mevcut Goal modelinde 'eklenme tarihi' olmadığı için, zamana göre grafiği şimdilik 
+            // hedeflerin listeye eklenme sırasına (Aşama 1, Aşama 2) göre çizdiriyoruz.
+            for (int i = 0; i < allGoals.size(); i++) {
+                Goal g = allGoals.get(i);
+                totalGoalCount++;
+                if (balance.getTotalBalance() >= g.getTargetAmount()) {
+                    completedGoalCount++;
+                }
+                
+                String stepStr = "Adım " + (i + 1);
+                totalGoalsSeries.getData().add(new javafx.scene.chart.XYChart.Data<String, Number>(stepStr, totalGoalCount));
+                completedGoalsSeries.getData().add(new javafx.scene.chart.XYChart.Data<String, Number>(stepStr, completedGoalCount));
+            }
+            goalsChart.getData().addAll(totalGoalsSeries, completedGoalsSeries);
         }
     }
 
