@@ -144,7 +144,7 @@ public class DashboardView {
         assetsTab.setContent(assetsLayout);
 
         // --- İKİNCİ SEKME: İŞLEMLERİM ---
-        Tab transactionsTab = new Tab("Gelir / Gider İşlemleri");
+        Tab transactionsTab = new Tab("Bütçe Yönetimi");
         BorderPane transactionsLayout = new BorderPane();
         
         // İşlemlerim -> Sol Taraf: Modern Kart Tasarımlı Form
@@ -794,11 +794,18 @@ public class DashboardView {
                 currentExpenseList.add(t); // İndeks uyumu için RAM'e ekle
             }
         }
-        // İşlem geçmişi listesini güncelle
+     // 1. ÖNCE DÖNGÜSÜ TAMAMLANAN OTOMATİK İŞLEMLERİ GEÇMİŞE SENKRONİZE ET
+        syncRecurringTransactionsToHistory();
+
+        // 2. SONRA İŞLEM GEÇMİŞİ LİSTESİNİ GÜNCELLE
         historyListView.getItems().clear();
         List<Transaction> historyList = transactionManager.loadUserHistory(user.getId());
+        
+        // Küçük bir UX dokunuşu: Listeyi ters çeviriyoruz ki en yeni işlemler en üstte görünsün
+        java.util.Collections.reverse(historyList); 
+        
         for (Transaction t : historyList) {
-            String typeStr = (t instanceof Income) ? "Gelir Eklendi: " : "Gider Eklendi: ";
+            String typeStr = (t instanceof Income) ? "Gelir İşlendi: " : "Gider İşlendi: ";
             String prefix = (t instanceof Income) ? "[+]" : "[-]";
             historyListView.getItems().add(prefix + " " + typeStr + t.getAmount() + " TL - " + t.getDescription() + " (" + t.getDate() + ")");
         }
@@ -855,6 +862,43 @@ public class DashboardView {
             goalListView.getItems().add(
                 goal.getName() + "  |  " + goal.getTargetAmount() + " TL  |  " + status
             );
+        }
+    }
+    /**
+     * Düzenli işlemleri (Haftalık, Aylık) kontrol eder. 
+     * Eğer bugünün tarihine kadar gerçekleşmiş ama geçmiş (history.txt) dosyasına 
+     * henüz yazılmamış bir döngü varsa, bunu otomatik olarak tespit edip geçmişe ekler.
+     */
+    private void syncRecurringTransactionsToHistory() {
+        List<Transaction> historyList = transactionManager.loadUserHistory(user.getId());
+        List<Transaction> expandedPast = balance.getExpandedTransactions(java.time.LocalDate.now());
+        List<Integer> matchedIndices = new java.util.ArrayList<>();
+
+        for (Transaction ext : expandedPast) {
+            boolean found = false;
+            
+            for (int i = 0; i < historyList.size(); i++) {
+                if (matchedIndices.contains(i)) continue; // Bu geçmiş kaydı daha önce eşleştirildiyse atla
+                
+                Transaction h = historyList.get(i);
+                // Tür, Miktar, Açıklama ve Tarih tamamen eşleşiyorsa bu işlem geçmişte var demektir
+                if (h.getClass().equals(ext.getClass()) &&
+                    h.getAmount() == ext.getAmount() &&
+                    h.getDescription().equals(ext.getDescription()) &&
+                    h.getDate().equals(ext.getDate())) {
+                    
+                    found = true;
+                    matchedIndices.add(i); // Eşleşeni işaretle ki aynı döngü tekrar tekrar eklenmesin
+                    break;
+                }
+            }
+            
+            // Eğer geçmiş loglarında bulunamadıysa (yani zamanı gelmiş yeni bir tekrarsa), dosyaya kaydet
+            if (!found) {
+                transactionManager.saveToHistory(user.getId(), ext);
+                historyList.add(ext);
+                matchedIndices.add(historyList.size() - 1);
+            }
         }
     }
 }
