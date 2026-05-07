@@ -2,7 +2,7 @@ package com.moneylab.model;
 
 import java.time.LocalDate;
 
-public abstract class Transaction {
+public abstract class Transaction implements FinancialRecord {
     private double amount;
     private String description;
     private LocalDate date;
@@ -28,6 +28,7 @@ public abstract class Transaction {
         this.amount = amount;
     }
 
+    @Override
     public String getDescription() {
         return description;
     }
@@ -65,5 +66,7 @@ public abstract class Transaction {
     }
 
     // Çok biçimlilik (Polymorphism) - Alt sınıflar (Income/Expense) burayı kendine göre dolduracak
+    // FinancialRecord arayüzünden gelen zorunlu metot
+    @Override
     public abstract double getSignedAmount();
 }

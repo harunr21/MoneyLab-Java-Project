@@ -14,6 +14,12 @@ import com.moneylab.model.*;
 import com.moneylab.service.TransactionManager;
 import com.moneylab.service.GoalManager;
 
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -659,6 +665,36 @@ public class DashboardView {
         });
 
         rootLayout.setCenter(tabPane);
+        rootLayout.setCenter(tabPane);
+
+        // =========================================================================
+        // ALT DURUM ÇUBUĞU (Sol Alt Köşe - Tarih ve Saat)
+        // =========================================================================
+        HBox bottomStatusBar = new HBox();
+        bottomStatusBar.setPadding(new Insets(5, 15, 5, 15));
+        bottomStatusBar.setStyle("-fx-background-color: #f8f9fc; -fx-border-color: #e0e0e0; -fx-border-width: 1 0 0 0;");
+        bottomStatusBar.setAlignment(Pos.CENTER_LEFT);
+
+        Label dateTimeLabel = new Label();
+        dateTimeLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #666; -fx-font-weight: bold;");
+
+        // Format: Gün.Ay.Yıl Saat:Dakika
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MM.yyyy  HH:mm");
+
+        // Her dakika güncelleyen zamanlayıcı
+        Timeline clock = new Timeline(new KeyFrame(Duration.ZERO, e -> {
+            dateTimeLabel.setText(LocalDateTime.now().format(dtf));
+        }), new KeyFrame(Duration.minutes(1)));
+        
+        clock.setCycleCount(Animation.INDEFINITE);
+        clock.play();
+
+        bottomStatusBar.getChildren().add(dateTimeLabel);
+        rootLayout.setBottom(bottomStatusBar);
+
+        // =========================================================================
+        // 3. İŞLEM EKLEME MANTIĞI VE KAYDETME
+        // =========================================================================
 
         // =========================================================================
         // 3. İŞLEM EKLEME MANTIĞI VE KAYDETME
