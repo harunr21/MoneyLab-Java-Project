@@ -18,3 +18,4 @@ data/*.txt
 
 # Claude Code guidance (local)
 CLAUDE.md
+.claude/
