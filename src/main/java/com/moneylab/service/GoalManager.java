@@ -12,7 +12,7 @@ import java.util.List;
 public class GoalManager {
 
     // Hedef dosyasının yolu
-    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "goals.txt";
+    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "data" + File.separator + "goals.txt";
 
     /**
      * Belirli bir kullanıcının tüm hedeflerini dosyadan okuyup liste olarak döndürür.

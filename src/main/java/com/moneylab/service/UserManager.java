@@ -9,7 +9,7 @@ public class UserManager {
 
     // Dosya yolunu çalışma dizinine göre belirliyoruz
     // Bu sayede uygulama hangi dizinden çalıştırılırsa çalıştırılsın dosyayı doğru yerde arar
-    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "users.txt";
+    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "data" + File.separator + "users.txt";
 
 
     public boolean register(String name, String password) {

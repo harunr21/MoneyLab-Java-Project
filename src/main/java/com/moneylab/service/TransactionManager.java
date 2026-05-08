@@ -9,8 +9,8 @@ import java.util.List;
 public class TransactionManager {
 
     // Dosya yolunu çalışma dizinine göre belirliyoruz
-    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "transactions.txt";
-    private static final String HISTORY_FILE_PATH = System.getProperty("user.dir") + File.separator + "history.txt";
+    private static final String FILE_PATH = System.getProperty("user.dir") + File.separator + "data" + File.separator + "transactions.txt";
+    private static final String HISTORY_FILE_PATH = System.getProperty("user.dir") + File.separator + "data" + File.separator + "history.txt";
 
     // Kullanıcının işlemlerini dosyadan okur ve bir liste olarak döndürür
     public List<Transaction> loadUserTransactions(int userId) {

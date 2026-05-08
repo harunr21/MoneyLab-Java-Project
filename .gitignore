@@ -14,8 +14,7 @@ target/
 .classpath
 
 # Kullanıcı Veritabanı ve İşlemler (Veri Dosyaları)
-users.txt
-transactions.txt
+data/*.txt
 
 # Claude Code guidance (local)
 CLAUDE.md
